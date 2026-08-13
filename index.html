@@ -86,6 +86,9 @@ select{ padding:0.5rem 0.8rem;border-radius:999px;border:2px solid var(--line); 
 .pill-btn.danger{background:var(--white);border-color:#c9564a;color:#c9564a;}
 .pill-btn.small{padding:0.35rem 0.75rem;font-size:0.78rem;}
 .save-note{font-size:0.75rem;color:var(--ink-soft);margin-left:0.4rem;}
+.save-note.error{color:#c9564a;font-weight:700;}
+
+.sync-warning-bar{ display:none; align-items:center; gap:0.6rem; background:var(--butter); border:2px solid var(--coral-deep); border-radius:999px; padding:0.35rem 0.9rem; font-size:0.78rem; font-weight:700; color:var(--ink); }
 
 /* 對話框 */
 .modal-overlay{ position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center;z-index:1000;display:none; padding:1rem;overflow-y:auto; }
@@ -163,6 +166,8 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .board-label{ text-align:center;font-size:0.85rem;font-weight:900;color:var(--ink); background:var(--butter);border:2px solid var(--ink);border-radius:8px; padding:0.5rem 1rem;margin:0 auto 1.2rem;max-width:300px;letter-spacing:0.2em; }
 .seat-grid-container{ overflow-x:auto;padding:1rem 0.5rem; }
 .seat-grid{display:grid;gap:0.7rem;justify-content:center;}
+
+.warn-banner{ background:var(--butter); border:2px solid var(--coral-deep); border-radius:10px; padding:0.7rem 1rem; font-size:0.82rem; font-weight:700; margin-bottom:1rem; }
 
 /* 解決座位版面凸出：強制隱藏溢位 */
 .seat{
@@ -243,6 +248,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .empty-hint{font-size:0.85rem;color:var(--ink-soft);padding:1rem;border:2px dashed var(--line);border-radius:10px;text-align:center;}
 .toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s ease, transform .3s ease; max-width:90vw;text-align:center; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+.toast.toast-error{background:#c9564a;}
 </style>
 </head>
 <body>
@@ -262,6 +268,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <button class="pill-btn small" id="newClassBtn">＋ 新增班級</button>
       <button class="pill-btn small danger" id="delClassBtn">刪除班級</button>
       <button class="pill-btn small primary" id="gdriveModalBtn">☁️ 雲端試算表同步設定</button>
+      <span class="sync-warning-bar" id="syncWarningBar">⚠️ 自動同步已開啟但尚未授權，請重新連結</span>
       <span class="save-note" id="saveNote">已自動儲存</span>
     </div>
   </div>
@@ -548,7 +555,15 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 const memStore = {};
 const storage = {
   get(key){ try{ const v = window.localStorage.getItem(key); return v===null? null : v; }catch(e){ return memStore[key] || null; } },
-  set(key,val){ try{ window.localStorage.setItem(key,val); }catch(e){ memStore[key]=val; } }
+  set(key,val){
+    try{
+      window.localStorage.setItem(key,val);
+      return true;
+    }catch(e){
+      memStore[key]=val;
+      return false;
+    }
+  }
 };
 
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
@@ -607,23 +622,42 @@ function loadDB(){
 }
 
 function saveDB(){
-  storage.set('sgh_db_v15', JSON.stringify(db));
+  const ok = storage.set('sgh_db_v15', JSON.stringify(db));
   const note = document.getElementById('saveNote');
-  if(note) note.textContent = '已自動儲存 · ' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  if(note){
+    if(ok){
+      note.classList.remove('error');
+      note.textContent = '已自動儲存 · ' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    } else {
+      note.classList.add('error');
+      note.textContent = '⚠️ 儲存失敗！請立即用「下載所有班級備份檔」匯出資料';
+      toast('儲存失敗，瀏覽器空間可能已滿，請盡快匯出備份檔！');
+    }
+  }
+  updateSyncWarning();
   if(cur && cur.autoSync && cur.sheetId) debouncedAutoPush();
+}
+
+function updateSyncWarning(){
+  const bar = document.getElementById('syncWarningBar');
+  if(!bar) return;
+  const shouldWarn = !!(cur && cur.autoSync && cur.sheetId && !window.accessToken);
+  bar.style.display = shouldWarn ? 'inline-flex' : 'none';
 }
 
 function allStudents(){ return [...cur.boys, ...cur.girls]; }
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
 function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function toast(msg){
+function toast(msg, isError){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+  t.classList.toggle('toast-error', !!isError);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
 }
 window.toast = toast; // 綁定至 window 供雲端回呼使用
 
 window.executePendingAction = function() {
+  updateSyncWarning();
   if (window.pendingAction === 'linkSheet') linkClassSheet();
   else if (window.pendingAction === 'pushSheet') pushScoresToSheet(false);
   else if (window.pendingAction === 'pullSheet') pullScoresFromSheet();
@@ -640,6 +674,7 @@ function switchView(view){
   if(view === 'dash') renderDashboard();
   else if(view === 'config') renderConfigClassroom();
   else if(view === 'score') renderScoreClassroom();
+  updateSyncWarning();
 }
 
 document.getElementById('goDashboardBtn').addEventListener('click', ()=> switchView('dash'));
@@ -759,7 +794,16 @@ document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
   reader.readAsText(file);
 });
 
-function getTargetSheetTabName(){ return `${curYear.name || '學年'}-${cur.name || '班級'}`; }
+function sanitizeSheetTabName(name){
+  // Google Sheets 分頁名稱不允許 : \ / ? * [ ]，且長度上限 100
+  let clean = String(name || '').replace(/[:\\\/\?\*\[\]]/g, '_').trim();
+  if(!clean) clean = '未命名';
+  return clean.slice(0, 95);
+}
+
+function getTargetSheetTabName(){
+  return sanitizeSheetTabName(`${curYear.name || '學年'}-${cur.name || '班級'}`);
+}
 
 function renderSheetStatus(){
   const tabName = getTargetSheetTabName();
@@ -771,6 +815,7 @@ function renderSheetStatus(){
     document.getElementById('sheetLinkStatus').textContent = '尚未連結試算表';
   }
   document.getElementById('autoSyncToggle').checked = !!cur.autoSync;
+  updateSyncWarning();
 }
 
 async function linkClassSheet(){
@@ -812,7 +857,7 @@ async function linkClassSheet(){
 
     cur.sheetId = sheetId; cur.sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
     saveDB(); renderSheetStatus(); await pushScoresToSheet(true); toast(`成功建立／連結工作表：${tabName}`);
-  }catch(e){ toast('連結失敗：' + e.message); }
+  }catch(e){ toast('連結失敗：' + e.message, true); }
 }
 
 function getStudentScoreObj(stuId){
@@ -844,14 +889,14 @@ async function pushScoresToSheet(silent){
     if(oldPlusMatch) plusScoreColName = oldPlusMatch;
     if(oldProjMatch) projectScoreColName = oldProjMatch;
 
-    // 最新要求的欄位順序 (移除總分，角色移到姓名後)
-    const baseHeader = ['座號','姓名','工作角色','性別','分數', plusScoreColName, projectScoreColName, '最近更新時間'];
+    // 最新要求的欄位順序 (移除總分，角色移到姓名後，新增學生ID供拉回比對)
+    const baseHeader = ['學生ID','座號','姓名','工作角色','性別','分數', plusScoreColName, projectScoreColName, '最近更新時間'];
     
     let actualHeader = baseHeader;
     let extraHeaders = [];
     if (existingHeader.length > 0) {
       extraHeaders = existingHeader.filter(h => 
-        !['座號','姓名','工作角色','性別','分數', '最近更新時間'].includes(h) && 
+        !['學生ID','座號','姓名','工作角色','性別','分數', '最近更新時間'].includes(h) && 
         !h.includes('-加分') && 
         !h.includes('-作品分') &&
         h !== '總分'
@@ -859,17 +904,19 @@ async function pushScoresToSheet(silent){
       actualHeader = [...baseHeader, ...extraHeaders];
     }
 
-    // 保留舊資料的額外自訂欄位
+    // 保留舊資料的額外自訂欄位（優先用學生ID比對，找不到才用座號+姓名當備援 key）
+    const idIdx = existingHeader.indexOf('學生ID');
     for(let i=1; i<existingRows.length; i++){
       const row = existingRows[i];
-      let seatNo = '', name = '';
+      let seatNo = '', name = '', sid = '';
+      if(idIdx !== -1) sid = String(row[idIdx] || '').trim();
       if(existingHeader.indexOf('座號') !== -1) seatNo = String(row[existingHeader.indexOf('座號')] || '').trim();
       else seatNo = String(row[0] || '').trim();
       
       if(existingHeader.indexOf('姓名') !== -1) name = String(row[existingHeader.indexOf('姓名')] || '').trim();
       else name = String(row[1] || '').trim();
       
-      if(seatNo || name) {
+      if(seatNo || name || sid) {
           let extraData = [];
           if(extraHeaders.length > 0) {
               extraHeaders.forEach(eh => {
@@ -877,7 +924,8 @@ async function pushScoresToSheet(silent){
                   extraData.push(idx !== -1 ? (row[idx]||'') : '');
               })
           }
-          extraColumnsMap[`${seatNo}_${name}`] = extraData;
+          const key = sid ? `id_${sid}` : `${seatNo}_${name}`;
+          extraColumnsMap[key] = extraData;
       }
     }
 
@@ -887,9 +935,10 @@ async function pushScoresToSheet(silent){
       const sc = getStudentScoreObj(s.id);
       const roles = (cur.studentRoles[s.id] || []).join('、');
       
-      let extraData = extraColumnsMap[`${s.seatNo || ''}_${s.name}`] || Array(extraHeaders.length).fill('');
+      let extraData = extraColumnsMap[`id_${s.id}`] || extraColumnsMap[`${s.seatNo || ''}_${s.name}`] || Array(extraHeaders.length).fill('');
       
       newRows.push([
+        s.id,
         s.seatNo || '', 
         s.name, 
         roles,
@@ -909,7 +958,7 @@ async function pushScoresToSheet(silent){
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     if(!silent) toast('已成功更新加分與時間至雲端工作表！');
-  }catch(e){ if(!silent) toast('推送失敗：' + e.message); }
+  }catch(e){ if(!silent) toast('推送失敗：' + e.message, true); }
 }
 
 async function pullScoresFromSheet(){
@@ -924,6 +973,7 @@ async function pullScoresFromSheet(){
     if(rows.length <= 1){ toast('工作表內沒有資料'); return; }
 
     const header = rows[0];
+    const idIdx = header.indexOf('學生ID');
     const seatIdx = header.indexOf('座號');
     const nameIdx = header.indexOf('姓名');
     const scoreIdx = header.indexOf('分數');
@@ -934,11 +984,14 @@ async function pullScoresFromSheet(){
     let updated = 0;
     for(let i=1; i<rows.length; i++){
       const r = rows[i];
+      const sid = idIdx>-1 ? String(r[idIdx]||'').trim() : '';
       const seatNo = seatIdx>-1 ? r[seatIdx] : r[0];
       const name = nameIdx>-1 ? r[nameIdx] : r[1];
-      if(!name) continue;
+      if(!name && !sid) continue;
 
-      const s = allStudents().find(x=>x.name===String(name).trim() || (seatNo && x.seatNo===String(seatNo).trim()));
+      // 優先用學生ID精準比對，避免同名同姓或座號重複造成資料誤植
+      let s = sid ? allStudents().find(x=>x.id===sid) : null;
+      if(!s) s = allStudents().find(x=>x.name===String(name||'').trim() || (seatNo && x.seatNo===String(seatNo).trim()));
       if(s){
         if(seatNo) s.seatNo = String(seatNo).trim();
         if(scoreIdx>-1 && r[scoreIdx]!==undefined && r[scoreIdx]!=='') {
@@ -962,7 +1015,7 @@ async function pullScoresFromSheet(){
     if(currentView === 'score') renderScoreClassroom();
     else if(currentView === 'config') renderConfigClassroom();
     toast(`已從工作表拉回 ${updated} 位學生資料`);
-  }catch(e){ toast('拉回失敗：' + e.message); }
+  }catch(e){ toast('拉回失敗：' + e.message, true); }
 }
 
 function debouncedAutoPush(){
@@ -970,6 +1023,7 @@ function debouncedAutoPush(){
   clearTimeout(autoPushTimer);
   autoPushTimer = setTimeout(()=>{
     if(window.accessToken) pushScoresToSheet(true);
+    else updateSyncWarning();
   }, 1200);
 }
 
@@ -985,7 +1039,13 @@ document.getElementById('updateCloudNowBtn').addEventListener('click', ()=>{
 
 function parseRoster(text, gender){
   return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
-    const parts = line.split(/[,，\t]+|\s+/).map(p=>p.trim()).filter(p=>p!=='');
+    // 優先用逗號/Tab切，避免姓名內含空白（如複姓中間誤植空格）被錯誤切開
+    let parts;
+    if(/[,，\t]/.test(line)){
+      parts = line.split(/[,，\t]+/).map(p=>p.trim()).filter(p=>p!=='');
+    } else {
+      parts = line.split(/\s+/).map(p=>p.trim()).filter(p=>p!=='');
+    }
     let seatNo='', name='', score=null;
     if(parts.length>=3){
       seatNo = parts[0]; name = parts[1];
@@ -1031,7 +1091,8 @@ document.getElementById('importFileInput').addEventListener('change', e=>{
         const seatNo = String(r[0] || '').trim();
         const name = String(r[1]).trim();
         const genderRaw = String(r[2]||'').trim().toUpperCase();
-        const gender = (genderRaw==='女'||genderRaw==='F')?'F':'M';
+        // 放寬性別辨識：包含「女」或以F/FEMALE開頭都視為女生，其餘預設男生
+        const gender = (genderRaw.includes('女') || genderRaw.startsWith('F')) ? 'F' : 'M';
         const scoreRaw = r[3];
         let score = null;
         if(scoreRaw!==undefined && scoreRaw!==''){
@@ -1042,7 +1103,7 @@ document.getElementById('importFileInput').addEventListener('change', e=>{
         if(gender==='M'){ cur.boys.push(stu); bCount++; } else { cur.girls.push(stu); gCount++; }
       });
       saveDB(); renderRosterTables(); renderConstraintSelects(); toast(`成功匯入 ${bCount+gCount} 位學生`);
-    }catch(err){ toast('匯入失敗，格式錯誤'); }
+    }catch(err){ toast('匯入失敗，格式錯誤', true); }
     e.target.value = '';
   };
   reader.readAsBinaryString(file);
@@ -1326,6 +1387,12 @@ document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
     cur.seats = seats;
   } else {
     const desksPerPod = cur.seatConfig.podDeskLayout.split('x').reduce((a,b)=>a*Number(b), 1);
+    // 檢查每組人數是否超過島嶼內部桌次設定，避免座位版面被硬塞爆版
+    const maxGroupSize = Math.max(0, ...cur.groups.map(g=>g.members.length));
+    if(maxGroupSize > desksPerPod){
+      toast(`⚠️ 有分組人數(${maxGroupSize}人)超過島嶼內部桌次(${desksPerPod}人)，請調整「內部桌次」設定或重新分組`, true);
+      return;
+    }
     cur.seats = cur.groups.map(g=>{
       const podDesks = Array(desksPerPod).fill(null);
       g.members.forEach((memId, mIdx)=>{ if(mIdx<desksPerPod) podDesks[mIdx] = {id:memId, groupId:g.id}; else podDesks.push({id:memId, groupId:g.id}); });
@@ -1336,7 +1403,7 @@ document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
 });
 
 function getBaseSeatHtml(occ, dropAttrs, showScoreControls = false){
-  if(!occ || !findStudent(occ.id)) return `<div class="seat empty draggable" ${dropAttrs}>空位</div>`;
+  if(!occ || !findStudent(occ.id)) return `<div class="seat empty" ${dropAttrs}>空位</div>`;
   const s = findStudent(occ.id);
   const roles = cur.studentRoles[s.id] || [];
   const sc = getStudentScoreObj(s.id);
@@ -1349,8 +1416,8 @@ function getBaseSeatHtml(occ, dropAttrs, showScoreControls = false){
       const gradeOpts = ['作品','A','B','C','D','E','假'].map(g=>`<option value="${g}" ${sc.projectGrade===g?'selected':''}>${g}</option>`).join('');
       const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
       controlsHtml = `
-        <div class="seat-score-row"><select class="grade-sel" data-stuid="${s.id}">${gradeOpts}</select><select class="mod-sel" data-stuid="${s.id}">${modOpts}</select></div>
-        <div class="score-control-box"><span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1">▼</button></div></div>
+        <div class="seat-score-row"><select class="grade-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的作品評級">${gradeOpts}</select><select class="mod-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的評級加減註記">${modOpts}</select></div>
+        <div class="score-control-box"><span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" aria-label="為${escapeHtml(s.name)}加分">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" aria-label="為${escapeHtml(s.name)}扣分">▼</button></div></div>
       `;
   }
 
@@ -1512,7 +1579,7 @@ document.getElementById('exportJpgBtn').addEventListener('click', async ()=>{
     link.download = `${curYear.name}_${cur.name}_加分座位表.jpg`;
     link.href = canvas.toDataURL('image/jpeg',0.95);
     link.click(); toast('已成功下載 JPG 圖檔');
-  }catch(e){ toast('匯出失敗'); }
+  }catch(e){ toast('匯出失敗', true); }
 });
 
 document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
@@ -1536,7 +1603,7 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
     });
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績總表');
     XLSX.writeFile(wb, `${curYear.name}_${cur.name}_成績紀錄表.xlsx`); toast('已成功下載 Excel');
-  }catch(e){ toast('匯出失敗'); }
+  }catch(e){ toast('匯出失敗', true); }
 });
 
 function renderConfigClassroom(){
