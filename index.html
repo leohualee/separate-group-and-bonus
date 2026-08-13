@@ -55,7 +55,6 @@
 <script async defer src="https://accounts.google.com/gsi/client" onload="onGisLoad()"></script>
 
 <style>
-/* 核心樣式設定 */
 :root{
   --paper:#FBF7EF; --paper-deep:#F3ECDD; --ink:#3A3532; --ink-soft:#7A7168;
   --line:#E4DAC6; --coral:#E8927C; --coral-deep:#D97A62; --pink:#F6C9CE;
@@ -217,10 +216,22 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .seat.empty{ background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
 .seat.drag-over{transform:scale(1.05);outline:3px dashed var(--coral-deep);z-index:10;}
 
-.pods-grid{ display:grid;gap:1.4rem;justify-content:center; }
-.pod-box{ border:2px dashed var(--ink);border-radius:14px; padding:0.8rem;background:rgba(255,255,255,0.7); box-shadow:0 3px 10px rgba(0,0,0,0.03); }
+/* ===== 島嶼佈局專用縮小樣式，避免 3 欄時破版 ===== */
+.pods-grid{ display:grid;gap:0.9rem;justify-content:center; }
+.pods-grid .pod-box{ border:2px dashed var(--ink);border-radius:14px; padding:0.6rem;background:rgba(255,255,255,0.7); box-shadow:0 3px 10px rgba(0,0,0,0.03); }
+.pods-grid .pod-desks{ display:grid;gap:0.4rem;justify-content:center; }
+
 .pod-head{ font-family:'Baloo 2',sans-serif;font-weight:800;font-size:0.85rem; padding:0.2rem 0.6rem;border-radius:6px;background:var(--pcolor,var(--mint)); margin-bottom:0.6rem;display:inline-block;border:1px solid var(--ink); }
-.pod-desks{ display:grid;gap:0.6rem;justify-content:center; }
+
+/* 針對島嶼佈局縮小座位內部元素 */
+.pods-grid .seat { width: 116px; min-height: 110px; padding: 0.3rem 0.4rem; }
+.pods-grid .seat-name { font-size: 0.78rem; }
+.pods-grid .seat-no { font-size: 0.6rem; }
+.pods-grid .seat .group-tag { font-size: 0.55rem; padding: 1px 4px; }
+.pods-grid .role-badge { font-size: 0.55rem; padding: 1px 3px; }
+.pods-grid .seat-score-row select { width: 36px; padding: 0; font-size: 0.65rem; }
+.pods-grid .score-control-box { padding: 1px 3px; margin-top: 1px; font-size: 0.65rem; }
+.pods-grid .score-btn { width: 18px; height: 18px; font-size: 0.65rem; }
 
 .facing-center .seat{ border-color:var(--ink); }
 .facing-podium .seat{ border-top-width:4px; }
@@ -298,7 +309,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 </style>
 </head>
 <body>
-
 <header class="top">
   <div class="top-inner">
     <div class="brand" id="goDashboardBtn"><span class="dot"></span>分組座位與即時計分系統＋</div>
@@ -860,7 +870,6 @@ document.getElementById('delClassBtn').addEventListener('click', ()=>{
   saveDB(); renderHeaderSelects(); switchView('dash'); toast('已刪除班級');
 });
 
-// ===== 封存舊學年 =====
 function computeYearStats(year){
   let studentCount=0, classCount=0;
   Object.values(year.classes||{}).forEach(c=>{ classCount++; studentCount += (c.boys?c.boys.length:0)+(c.girls?c.girls.length:0); });
@@ -978,7 +987,6 @@ document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
 });
 
 function sanitizeSheetTabName(name){
-  // Google Sheets 分頁名稱不允許 : \ / ? * [ ]，且長度上限 100
   let clean = String(name || '').replace(/[:\\\/\?\*\[\]]/g, '_').trim();
   if(!clean) clean = '未命名';
   return clean.slice(0, 95);
@@ -1049,7 +1057,6 @@ function getStudentScoreObj(stuId){
   return cur.studentScores[stuId];
 }
 
-// ===== 加分歷史紀錄 =====
 function logScoreChange(stuId, delta, reason){
   const sc = getStudentScoreObj(stuId);
   sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason: reason || (delta>=0 ? '課堂加分' : '課堂扣分') });
@@ -1118,7 +1125,6 @@ async function pushScoresToSheet(silent){
     if(oldPlusMatch) plusScoreColName = oldPlusMatch;
     if(oldProjMatch) projectScoreColName = oldProjMatch;
 
-    // 最新要求的欄位順序 (移除總分，角色移到姓名後，新增學生ID供拉回比對)
     const baseHeader = ['學生ID','座號','姓名','工作角色','性別','分數', plusScoreColName, projectScoreColName, '最近更新時間'];
     
     let actualHeader = baseHeader;
@@ -1133,7 +1139,6 @@ async function pushScoresToSheet(silent){
       actualHeader = [...baseHeader, ...extraHeaders];
     }
 
-    // 保留舊資料的額外自訂欄位（優先用學生ID比對，找不到才用座號+姓名當備援 key）
     const idIdx = existingHeader.indexOf('學生ID');
     for(let i=1; i<existingRows.length; i++){
       const row = existingRows[i];
@@ -1218,7 +1223,6 @@ async function pullScoresFromSheet(){
       const name = nameIdx>-1 ? r[nameIdx] : r[1];
       if(!name && !sid) continue;
 
-      // 優先用學生ID精準比對，避免同名同姓或座號重複造成資料誤植
       let s = sid ? allStudents().find(x=>x.id===sid) : null;
       if(!s) s = allStudents().find(x=>x.name===String(name||'').trim() || (seatNo && x.seatNo===String(seatNo).trim()));
       if(s){
@@ -1268,7 +1272,6 @@ document.getElementById('updateCloudNowBtn').addEventListener('click', ()=>{
 
 function parseRoster(text, gender){
   return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
-    // 優先用逗號/Tab切，避免姓名內含空白（如複姓中間誤植空格）被錯誤切開
     let parts;
     if(/[,，\t]/.test(line)){
       parts = line.split(/[,，\t]+/).map(p=>p.trim()).filter(p=>p!=='');
@@ -1320,7 +1323,6 @@ document.getElementById('importFileInput').addEventListener('change', e=>{
         const seatNo = String(r[0] || '').trim();
         const name = String(r[1]).trim();
         const genderRaw = String(r[2]||'').trim().toUpperCase();
-        // 放寬性別辨識：包含「女」或以F/FEMALE開頭都視為女生，其餘預設男生
         const gender = (genderRaw.includes('女') || genderRaw.startsWith('F')) ? 'F' : 'M';
         const scoreRaw = r[3];
         let score = null;
@@ -1480,7 +1482,6 @@ function genderBalancedGroups(caps){
   return groups;
 }
 
-// 修正後依賴確實的 score 排序以達成成績 S 型均勻分配
 function scoreGenderGroups(caps){
   const groups = caps.map(()=>[]);
   const hasScore = allStudents().some(s=>s.score!==null && s.score!==undefined);
@@ -1616,7 +1617,6 @@ document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
     cur.seats = seats;
   } else {
     const desksPerPod = cur.seatConfig.podDeskLayout.split('x').reduce((a,b)=>a*Number(b), 1);
-    // 檢查每組人數是否超過島嶼內部桌次設定，避免座位版面被硬塞爆版
     const maxGroupSize = Math.max(0, ...cur.groups.map(g=>g.members.length));
     if(maxGroupSize > desksPerPod){
       toast(`⚠️ 有分組人數(${maxGroupSize}人)超過島嶼內部桌次(${desksPerPod}人)，請調整「內部桌次」設定或重新分組`, true);
@@ -1742,7 +1742,8 @@ function renderConfigSeats(){
   } else {
     const pCols = Number(cur.seatConfig.podDeskLayout.split('x')[1]);
     const facing = cur.seatConfig.podFacing || 'podium';
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols}, auto);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box facing-${facing}"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 148px);">${pod.desks.map((occ, dIdx) => getBaseSeatHtml(occ, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
+    // 在島嶼模式下，把 grid 的 148px 寬度覆寫為較小的 116px 寬度，配合 CSS `.pods-grid .seat` 樣式
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols}, auto);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box facing-${facing}"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map((occ, dIdx) => getBaseSeatHtml(occ, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
     bindSeatInteractions(area, true, false);
   }
 }
@@ -1765,7 +1766,8 @@ function renderScoreSeats(){
   } else {
     const pCols = Number(cur.seatConfig.podDeskLayout.split('x')[1]);
     const facing = cur.seatConfig.podFacing || 'podium';
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols}, auto);">${cur.seats.map((pod,pIdx)=>`<div class="pod-box facing-${facing}"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 148px);">${pod.desks.map((o,dIdx)=>getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
+    // 同樣在計分面板中將島嶼模式下的座位寬度修改為 116px
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols}, auto);">${cur.seats.map((pod,pIdx)=>`<div class="pod-box facing-${facing}"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map((o,dIdx)=>getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
     bindSeatInteractions(area, true, true);
   }
 
@@ -1930,7 +1932,6 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur.seats){ toast('請先排入座位'); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    // Excel標題: 移除總分，工作角色在姓名後，加入動態日期標題
     const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr}-加分`,`${dateStr}-作品分`,'最近更新時間']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
