@@ -249,6 +249,52 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s ease, transform .3s ease; max-width:90vw;text-align:center; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 .toast.toast-error{background:#c9564a;}
+
+/* ===== 封存學年 ===== */
+.archive-list{display:flex;flex-direction:column;gap:0.6rem;margin-top:0.8rem;max-height:260px;overflow-y:auto;}
+.archive-item{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;background:var(--paper);border:2px solid var(--line);border-radius:10px;padding:0.6rem 0.8rem;flex-wrap:wrap;}
+.archive-item .ai-meta{font-size:0.78rem;color:var(--ink-soft);}
+.archive-item .ai-name{font-weight:800;font-size:0.9rem;}
+
+/* ===== 加分歷史紀錄 ===== */
+.history-log-list{display:flex;flex-direction:column;gap:0.5rem;max-height:340px;overflow-y:auto;margin-top:0.8rem;}
+.history-log-item{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;border-radius:8px;background:var(--paper);border:1.5px solid var(--line);font-size:0.8rem;}
+.history-log-item .hl-delta{font-family:'Baloo 2',sans-serif;font-weight:800;padding:0.1rem 0.5rem;border-radius:6px;flex-shrink:0;}
+.history-log-item .hl-delta.pos{background:var(--mint);color:#1d5c3a;}
+.history-log-item .hl-delta.neg{background:#F6C9CE;color:#8A3B4D;}
+.history-log-item .hl-body{flex:1;}
+.history-log-item .hl-reason{font-weight:700;}
+.history-log-item .hl-time{color:var(--ink-soft);font-size:0.72rem;}
+.hist-open-btn{font-size:0.68rem;}
+
+/* ===== 批次操作 ===== */
+.batch-toggle-row{display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-top:0.7rem;padding-top:0.7rem;border-top:1.5px dashed var(--line);}
+.seat.batch-selectable{cursor:pointer;}
+.seat.batch-selected{outline:3px solid var(--coral-deep);outline-offset:2px;box-shadow:0 0 0 4px rgba(217,122,98,0.25);}
+.seat-select-check{ position:absolute; top:4px; left:4px; width:20px;height:20px;border-radius:5px; border:2px solid currentColor; background:rgba(255,255,255,0.85); display:flex;align-items:center;justify-content:center; font-size:0.75rem;font-weight:900;color:var(--ink); z-index:3; }
+.seat.batch-selected .seat-select-check{background:var(--coral-deep);color:#fff;border-color:var(--coral-deep);}
+.batch-toolbar{ position:sticky; bottom:0.8rem; z-index:35; display:none; align-items:center; gap:0.6rem; flex-wrap:wrap; background:var(--ink); color:var(--paper); border-radius:14px; padding:0.7rem 1rem; margin-top:1rem; box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.batch-toolbar.show{display:flex;}
+.batch-toolbar .bt-count{font-weight:800;font-size:0.85rem;background:var(--coral);padding:0.25rem 0.7rem;border-radius:999px;white-space:nowrap;}
+.batch-toolbar button{ padding:0.4rem 0.85rem;border-radius:999px;border:2px solid var(--paper); background:transparent;color:var(--paper);font-weight:700;font-size:0.78rem; }
+.batch-toolbar button:hover{background:rgba(255,255,255,0.15);}
+.batch-toolbar button.bt-primary{background:var(--coral);border-color:var(--coral-deep);}
+
+/* ===== iPad／平板：底部固定角色刷子＋批次工具列 ===== */
+@media (max-width: 1024px){
+  .wrap{ padding-bottom:8.5rem; }
+  .job-brush-panel{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    margin:0; border-radius:16px 16px 0 0;
+    box-shadow:0 -6px 20px rgba(0,0,0,0.18);
+    padding:0.7rem 0.9rem calc(0.7rem + env(safe-area-inset-bottom,0px));
+    max-height:38vh; overflow-y:auto;
+  }
+  .brush-btns{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
+  .brush-btn{ flex-shrink:0; }
+  .batch-toggle-row{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .batch-toolbar{ position:static; margin-top:0.6rem; }
+}
 </style>
 </head>
 <body>
@@ -263,6 +309,8 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       </div>
       <select id="yearSelect" aria-label="選擇學年度"></select>
       <button class="pill-btn small" id="newYearBtn">＋ 新增學年度</button>
+      <button class="pill-btn small" id="archiveYearBtn">🗄️ 封存學年</button>
+      <button class="pill-btn small" id="archiveListBtn">📦 已封存清單</button>
       <span class="bar-divider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
       <button class="pill-btn small" id="newClassBtn">＋ 新增班級</button>
@@ -303,6 +351,33 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       </div>
     </div>
     <div class="modal-btns"><button class="pill-btn" id="gdriveCloseModalBtn">關閉</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="archiveListModal">
+  <div class="modal-box">
+    <h3>📦 已封存學年度</h3>
+    <p>封存後的學年資料已從主資料庫移除（減輕瀏覽器儲存空間負擔），僅保留下方基本資訊。若要查看或編輯，請下載當初匯出的備份 JSON 後用「還原封存檔」匯入。</p>
+    <div class="archive-list" id="archiveListWrap"><div class="empty-hint">目前沒有已封存的學年度。</div></div>
+    <div style="background:var(--paper-deep);padding:1rem;border-radius:10px;margin-top:1rem;border:1.5px solid var(--line);">
+      <div style="font-weight:800;margin-bottom:0.5rem;font-size:0.85rem;">📤 還原封存檔</div>
+      <p style="font-size:0.78rem;margin-bottom:0.6rem;">選擇封存學年度時下載的 JSON 檔案，即可把該學年度資料還原回主資料庫。</p>
+      <button class="pill-btn small" id="restoreArchiveBtn">選擇封存 JSON 檔案</button>
+      <input type="file" id="restoreArchiveFile" accept=".json" style="display:none;">
+    </div>
+    <div class="modal-btns"><button class="pill-btn" id="archiveListCloseBtn">關閉</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyLogModal">
+  <div class="modal-box">
+    <h3>📜 加分歷史紀錄</h3>
+    <p>目前學生：<strong id="historyStuLabel"></strong></p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+      <button class="pill-btn small primary" id="addManualLogBtn">➕ 新增一筆加減分（含原因）</button>
+    </div>
+    <div class="history-log-list" id="historyLogList"><div class="empty-hint">尚無紀錄。</div></div>
+    <div class="modal-btns"><button class="pill-btn" id="historyLogCloseBtn">關閉</button></div>
   </div>
 </div>
 
@@ -465,6 +540,18 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <div class="job-brush-panel">
         <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（選好後，點擊下方座位即可指派，可重複疊加多個角色）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
+        <div class="batch-toggle-row">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;">
+            <input type="checkbox" id="configBatchModeToggle" style="width:16px;height:16px;accent-color:var(--coral-deep);">
+            <span>☑️ 批次選取模式（勾選多位學生後統一指派角色）</span>
+          </label>
+        </div>
+        <div class="batch-toolbar" id="configBatchToolbar">
+          <span class="bt-count" id="configBatchCount">已選 0 位</span>
+          <button class="bt-primary" id="configBatchApplyBrush">套用目前刷子</button>
+          <button id="configBatchClearRole">清除已選角色</button>
+          <button id="configBatchClearSel">取消選取</button>
+        </div>
       </div>
 
       <div class="gender-legend">
@@ -520,6 +607,19 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <div class="job-brush-panel">
         <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（選好後點擊座位）：</div>
         <div class="brush-btns" id="scoreBrushBtns"></div>
+        <div class="batch-toggle-row">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;">
+            <input type="checkbox" id="scoreBatchModeToggle" style="width:16px;height:16px;accent-color:var(--coral-deep);">
+            <span>☑️ 批次選取模式（勾選多位學生後統一加分／指派角色）</span>
+          </label>
+        </div>
+        <div class="batch-toolbar" id="scoreBatchToolbar">
+          <span class="bt-count" id="scoreBatchCount">已選 0 位</span>
+          <button class="bt-primary" id="scoreBatchPlus">批次加分</button>
+          <button id="scoreBatchApplyBrush">套用目前刷子</button>
+          <button id="scoreBatchClearRole">清除已選角色</button>
+          <button id="scoreBatchClearSel">取消選取</button>
+        </div>
       </div>
 
       <div>
@@ -569,10 +669,13 @@ const storage = {
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
 const uid = ()=> Math.random().toString(36).slice(2,9);
 
-window.db = { years:{}, lastYearId:null };
+window.db = { years:{}, lastYearId:null, archivedYearsMeta:[] };
 window.curYear = null;
 window.cur = null;
 window.activeBrushRole = "";
+window.batchMode = false;
+window.selectedIds = new Set();
+window.historyModalStuId = null;
 let currentView = 'dash';
 let autoPushTimer = null;
 let toastTimer;
@@ -619,6 +722,7 @@ function loadDB(){
   if(!cur.studentScores) cur.studentScores = {};
   if(cur.autoSync === undefined) cur.autoSync = false;
   if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '環境長', '小老師'];
+  if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
 }
 
 function saveDB(){
@@ -756,6 +860,85 @@ document.getElementById('delClassBtn').addEventListener('click', ()=>{
   saveDB(); renderHeaderSelects(); switchView('dash'); toast('已刪除班級');
 });
 
+// ===== 封存舊學年 =====
+function computeYearStats(year){
+  let studentCount=0, classCount=0;
+  Object.values(year.classes||{}).forEach(c=>{ classCount++; studentCount += (c.boys?c.boys.length:0)+(c.girls?c.girls.length:0); });
+  return {studentCount, classCount};
+}
+
+document.getElementById('archiveYearBtn').addEventListener('click', ()=>{
+  const yearIds = Object.keys(db.years);
+  if(yearIds.length<=1){ toast('至少要保留一個學年度喔'); return; }
+  if(!confirm(`確定要封存「${curYear.name}」嗎？\n系統會先下載該學年度的備份 JSON，接著會將它從主資料庫移除以節省瀏覽器儲存空間。\n請務必確認 JSON 已下載成功再繼續！`)) return;
+
+  const yearToArchive = curYear;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ archivedYear: yearToArchive }, null, 2));
+  const dl = document.createElement('a');
+  dl.href = dataStr; dl.download = `學年封存_${yearToArchive.name}_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(dl); dl.click(); dl.remove();
+
+  const stats = computeYearStats(yearToArchive);
+  if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
+  db.archivedYearsMeta.push({ id: yearToArchive.id, name: yearToArchive.name, archivedAt: new Date().toLocaleString('zh-TW'), studentCount: stats.studentCount, classCount: stats.classCount });
+
+  delete db.years[yearToArchive.id];
+  db.lastYearId = Object.keys(db.years)[0];
+  curYear = db.years[db.lastYearId];
+  if(!curYear.lastClassId || !curYear.classes[curYear.lastClassId]) curYear.lastClassId = Object.keys(curYear.classes)[0];
+  cur = curYear.classes[curYear.lastClassId];
+
+  saveDB(); renderHeaderSelects(); switchView('dash');
+  toast(`已封存「${yearToArchive.name}」並從主資料庫移除，JSON 備份已下載`);
+});
+
+function renderArchiveList(){
+  const wrap = document.getElementById('archiveListWrap');
+  const list = db.archivedYearsMeta || [];
+  if(list.length===0){ wrap.innerHTML = '<div class="empty-hint">目前沒有已封存的學年度。</div>'; return; }
+  wrap.innerHTML = list.map((m,i)=>`
+    <div class="archive-item">
+      <div><div class="ai-name">🗄️ ${escapeHtml(m.name)}</div><div class="ai-meta">封存於 ${escapeHtml(m.archivedAt)}・${m.classCount} 個班級・${m.studentCount} 位學生</div></div>
+      <button class="pill-btn small danger" data-i="${i}">移除紀錄</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('button[data-i]').forEach(btn=> btn.addEventListener('click', ()=>{
+    if(!confirm('僅移除封存清單中的紀錄（不會刪除您已下載的備份檔），確定嗎？')) return;
+    db.archivedYearsMeta.splice(Number(btn.dataset.i),1);
+    saveDB(); renderArchiveList();
+  }));
+}
+
+document.getElementById('archiveListBtn').addEventListener('click', ()=>{ renderArchiveList(); document.getElementById('archiveListModal').style.display='flex'; });
+document.getElementById('archiveListCloseBtn').addEventListener('click', ()=> document.getElementById('archiveListModal').style.display='none');
+
+document.getElementById('restoreArchiveBtn').addEventListener('click', ()=> document.getElementById('restoreArchiveFile').click());
+document.getElementById('restoreArchiveFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const imported = JSON.parse(evt.target.result);
+      const year = imported.archivedYear || imported;
+      if(!year || !year.classes){ toast('檔案格式不正確', true); return; }
+      let newId = year.id;
+      if(!newId || db.years[newId]) newId = uid();
+      year.id = newId;
+      db.years[newId] = year;
+      if(db.archivedYearsMeta) db.archivedYearsMeta = db.archivedYearsMeta.filter(m=> m.name !== year.name);
+      db.lastYearId = newId; curYear = year;
+      if(!curYear.lastClassId || !curYear.classes[curYear.lastClassId]) curYear.lastClassId = Object.keys(curYear.classes)[0];
+      cur = curYear.classes[curYear.lastClassId];
+      saveDB(); renderHeaderSelects(); renderArchiveList();
+      document.getElementById('archiveListModal').style.display='none';
+      switchView('dash');
+      toast(`已還原學年度「${year.name}」`);
+    }catch(err){ toast('讀取檔案失敗', true); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
 document.getElementById('classNameInput').addEventListener('input', e=>{
   cur.name = e.target.value;
   document.getElementById('configClassNameTitle').textContent = cur.name || '班級分組與座位設定';
@@ -861,9 +1044,55 @@ async function linkClassSheet(){
 }
 
 function getStudentScoreObj(stuId){
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '' };
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [] };
+  if(!cur.studentScores[stuId].scoreLog) cur.studentScores[stuId].scoreLog = [];
   return cur.studentScores[stuId];
 }
+
+// ===== 加分歷史紀錄 =====
+function logScoreChange(stuId, delta, reason){
+  const sc = getStudentScoreObj(stuId);
+  sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason: reason || (delta>=0 ? '課堂加分' : '課堂扣分') });
+  if(sc.scoreLog.length>200) sc.scoreLog = sc.scoreLog.slice(-200);
+}
+
+function openHistoryModal(stuId){
+  window.historyModalStuId = stuId;
+  const s = findStudent(stuId);
+  document.getElementById('historyStuLabel').textContent = s ? s.name : '';
+  renderHistoryLog();
+  document.getElementById('historyLogModal').style.display = 'flex';
+}
+
+function renderHistoryLog(){
+  const wrap = document.getElementById('historyLogList');
+  if(!window.historyModalStuId){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  const sc = getStudentScoreObj(window.historyModalStuId);
+  const log = sc.scoreLog || [];
+  if(log.length===0){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  wrap.innerHTML = log.slice().reverse().map(entry=>{
+    const cls = entry.delta>=0 ? 'pos' : 'neg';
+    const sign = entry.delta>=0 ? ('+'+entry.delta) : entry.delta;
+    return `<div class="history-log-item"><span class="hl-delta ${cls}">${sign}</span><div class="hl-body"><div class="hl-reason">${escapeHtml(entry.reason||'')}</div><div class="hl-time">${escapeHtml(entry.t||'')}</div></div></div>`;
+  }).join('');
+}
+
+document.getElementById('historyLogCloseBtn').addEventListener('click', ()=>{ document.getElementById('historyLogModal').style.display='none'; window.historyModalStuId=null; });
+
+document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
+  const stuId = window.historyModalStuId; if(!stuId) return;
+  const deltaStr = prompt('請輸入加分數值（可用負數代表扣分）：', '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0){ toast('請輸入有效的非零數字'); return; }
+  const reason = prompt('請輸入原因（選填）：', '') || '';
+  const sc = getStudentScoreObj(stuId);
+  sc.plusScore += delta;
+  logScoreChange(stuId, delta, reason);
+  saveDB(); renderHistoryLog();
+  if(currentView==='score') renderScoreSeats();
+  toast('已新增一筆紀錄');
+});
 
 async function pushScoresToSheet(silent){
   if(!cur.sheetId){ if(!silent) toast('請先連結試算表'); return; }
@@ -1417,11 +1646,16 @@ function getBaseSeatHtml(occ, dropAttrs, showScoreControls = false){
       const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
       controlsHtml = `
         <div class="seat-score-row"><select class="grade-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的作品評級">${gradeOpts}</select><select class="mod-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的評級加減註記">${modOpts}</select></div>
-        <div class="score-control-box"><span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" aria-label="為${escapeHtml(s.name)}加分">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" aria-label="為${escapeHtml(s.name)}扣分">▼</button></div></div>
+        <div class="score-control-box"><span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn hist-open-btn" data-stuid="${s.id}" aria-label="查看${escapeHtml(s.name)}的加分歷史紀錄" title="歷史紀錄">📜</button><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" aria-label="為${escapeHtml(s.name)}加分">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" aria-label="為${escapeHtml(s.name)}扣分">▼</button></div></div>
       `;
   }
 
-  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'} ${roles.length>0?'has-role':''} draggable" ${dropAttrs} data-stuid="${s.id}" style="--scolor:${groupColorHex}; justify-content:center;">
+  const batchOn = !!window.batchMode;
+  const isSelected = batchOn && window.selectedIds.has(s.id);
+  const checkHtml = batchOn ? `<span class="seat-select-check">${isSelected?'✓':''}</span>` : '';
+
+  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'} ${roles.length>0?'has-role':''} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''} draggable" ${dropAttrs} data-stuid="${s.id}" style="--scolor:${groupColorHex}; justify-content:center;">
+    ${checkHtml}
     ${roleHtml}
     <div class="seat-top-row">
       <span class="seat-name" title="${escapeHtml(s.name)}">${genderIcon} ${escapeHtml(s.name)}</span>
@@ -1435,10 +1669,21 @@ function getBaseSeatHtml(occ, dropAttrs, showScoreControls = false){
 function bindSeatInteractions(container, isPods, isScoreView){
   const seatEls = container.querySelectorAll('.seat');
   seatEls.forEach(el=>{
-    // 指派角色邏輯
+    // 指派角色邏輯（含批次選取模式）
     el.addEventListener('click', e=>{
       if(e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
       const id = el.dataset.stuid; if(!id) return;
+
+      if(window.batchMode){
+        const nowSelected = !window.selectedIds.has(id);
+        if(nowSelected) window.selectedIds.add(id); else window.selectedIds.delete(id);
+        el.classList.toggle('batch-selected', nowSelected);
+        const badge = el.querySelector('.seat-select-check');
+        if(badge) badge.textContent = nowSelected ? '✓' : '';
+        updateBatchToolbar();
+        return;
+      }
+
       if(window.activeBrushRole === "") return;
       
       if(!cur.studentRoles[id]) cur.studentRoles[id] = [];
@@ -1506,6 +1751,8 @@ function renderScoreClassroom(){
   document.getElementById('scoreViewTitle').textContent = `🎯 ${curYear.name}・${cur.name} 即時加分面板`;
   document.getElementById('scoreCaptureClassTitle').textContent = `🎯 ${curYear.name}・${cur.name} 加分與計分座位表`;
   renderBrushButtons(); renderScoreSeats();
+  const t = document.getElementById('scoreBatchModeToggle'); if(t) t.checked = window.batchMode;
+  updateBatchToolbar();
 }
 
 function renderScoreSeats(){
@@ -1528,12 +1775,18 @@ function renderScoreSeats(){
     if(sel.classList.contains('grade-sel')) sc.projectGrade = sel.value; else sc.projectModifier = sel.value;
     saveDB();
   }));
-  area.querySelectorAll('.score-btn').forEach(btn=> btn.addEventListener('click', e=>{
+  area.querySelectorAll('.score-btn[data-dir]').forEach(btn=> btn.addEventListener('click', e=>{
     e.stopPropagation();
     const id = btn.dataset.stuid, sc = getStudentScoreObj(id);
-    sc.plusScore += Number(btn.dataset.dir);
+    const dir = Number(btn.dataset.dir);
+    sc.plusScore += dir;
+    logScoreChange(id, dir, dir>=0?'課堂加分':'課堂扣分');
     document.getElementById(`plus-disp-${id}`).textContent = sc.plusScore;
     saveDB();
+  }));
+  area.querySelectorAll('.hist-open-btn').forEach(btn=> btn.addEventListener('click', e=>{
+    e.stopPropagation();
+    openHistoryModal(btn.dataset.stuid);
   }));
 }
 
@@ -1560,6 +1813,97 @@ function handleBrushClick(e){
 document.getElementById('scoreBrushBtns').addEventListener('click', handleBrushClick);
 const configBrushBtns = document.getElementById('configBrushBtns');
 if(configBrushBtns) configBrushBtns.addEventListener('click', handleBrushClick);
+
+// ===== 批次操作 =====
+function setBatchMode(on){
+  window.batchMode = on;
+  if(!on) window.selectedIds.clear();
+  const cfgToggle = document.getElementById('configBatchModeToggle');
+  const scToggle = document.getElementById('scoreBatchModeToggle');
+  if(cfgToggle) cfgToggle.checked = on;
+  if(scToggle) scToggle.checked = on;
+  updateBatchToolbar();
+  if(currentView==='config') renderConfigSeats();
+  else if(currentView==='score') renderScoreSeats();
+}
+
+function updateBatchToolbar(){
+  const n = window.selectedIds.size;
+  ['config','score'].forEach(prefix=>{
+    const bar = document.getElementById(prefix+'BatchToolbar');
+    const countEl = document.getElementById(prefix+'BatchCount');
+    if(!bar) return;
+    bar.classList.toggle('show', window.batchMode && n>0);
+    if(countEl) countEl.textContent = `已選 ${n} 位`;
+  });
+}
+
+function clearBatchSelection(){
+  window.selectedIds.clear();
+  updateBatchToolbar();
+  if(currentView==='config') renderConfigSeats();
+  else if(currentView==='score') renderScoreSeats();
+}
+
+function batchApplyBrush(){
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
+  if(window.activeBrushRole===''){ toast('請先選擇一個角色刷子'); return; }
+  window.selectedIds.forEach(id=>{
+    if(!cur.studentRoles[id]) cur.studentRoles[id]=[];
+    if(window.activeBrushRole==='ERASER'){ cur.studentRoles[id]=[]; }
+    else if(!cur.studentRoles[id].includes(window.activeBrushRole)) cur.studentRoles[id].push(window.activeBrushRole);
+  });
+  const n = window.selectedIds.size;
+  saveDB();
+  if(currentView==='config') renderConfigSeats(); else if(currentView==='score') renderScoreSeats();
+  toast(`已為 ${n} 位學生套用角色`);
+}
+
+function batchClearRole(){
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
+  window.selectedIds.forEach(id=>{ cur.studentRoles[id]=[]; });
+  saveDB();
+  if(currentView==='config') renderConfigSeats(); else if(currentView==='score') renderScoreSeats();
+  toast('已清除已選學生的角色');
+}
+
+function batchAdjustScore(){
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
+  const n = window.selectedIds.size;
+  const deltaStr = prompt(`要為選取的 ${n} 位學生加減多少分？（可用負數扣分）`, '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0){ toast('請輸入有效的非零數字'); return; }
+  const reason = prompt('原因（選填，會套用到每一筆紀錄）：', '') || '';
+  window.selectedIds.forEach(id=>{
+    const sc = getStudentScoreObj(id);
+    sc.plusScore += delta;
+    logScoreChange(id, delta, reason);
+  });
+  saveDB(); renderScoreSeats();
+  toast(`已為 ${n} 位學生加減分`);
+}
+
+const configBatchModeToggle = document.getElementById('configBatchModeToggle');
+if(configBatchModeToggle) configBatchModeToggle.addEventListener('change', e=> setBatchMode(e.target.checked));
+const scoreBatchModeToggle = document.getElementById('scoreBatchModeToggle');
+if(scoreBatchModeToggle) scoreBatchModeToggle.addEventListener('change', e=> setBatchMode(e.target.checked));
+
+const configBatchApplyBrush = document.getElementById('configBatchApplyBrush');
+if(configBatchApplyBrush) configBatchApplyBrush.addEventListener('click', batchApplyBrush);
+const configBatchClearRole = document.getElementById('configBatchClearRole');
+if(configBatchClearRole) configBatchClearRole.addEventListener('click', batchClearRole);
+const configBatchClearSel = document.getElementById('configBatchClearSel');
+if(configBatchClearSel) configBatchClearSel.addEventListener('click', clearBatchSelection);
+
+const scoreBatchPlus = document.getElementById('scoreBatchPlus');
+if(scoreBatchPlus) scoreBatchPlus.addEventListener('click', batchAdjustScore);
+const scoreBatchApplyBrush = document.getElementById('scoreBatchApplyBrush');
+if(scoreBatchApplyBrush) scoreBatchApplyBrush.addEventListener('click', batchApplyBrush);
+const scoreBatchClearRole = document.getElementById('scoreBatchClearRole');
+if(scoreBatchClearRole) scoreBatchClearRole.addEventListener('click', batchClearRole);
+const scoreBatchClearSel = document.getElementById('scoreBatchClearSel');
+if(scoreBatchClearSel) scoreBatchClearSel.addEventListener('click', clearBatchSelection);
 
 document.getElementById('addJobBtn').addEventListener('click', ()=>{
   const val = document.getElementById('newJobInput').value.trim();
@@ -1622,6 +1966,8 @@ function renderConfigClassroom(){
   document.getElementById('useConstraintsToggle').checked = !!cur.groupConfig.useConstraints;
   document.getElementById('constraintPanel').style.display = cur.groupConfig.useConstraints ? 'block':'none';
   renderConstraintSelects(); renderConstraintChips(); renderGroups(); renderConfigSeats();
+  const t = document.getElementById('configBatchModeToggle'); if(t) t.checked = window.batchMode;
+  updateBatchToolbar();
 }
 
 // 系統啟動程序
