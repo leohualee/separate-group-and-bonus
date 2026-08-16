@@ -339,7 +339,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
     <div style="background:var(--mint);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
       <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">📊 獨立工作表雙向同步</div>
-      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>Excel 自行增加的額外欄位會完全保留</strong>，不會被覆蓋。</p>
+      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄（同一天內重複推送只會更新當天那一欄，不會覆蓋前幾天的紀錄）；Excel 自行增加的額外欄位也會完全保留。</strong></p>
       <div id="sheetLinkStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結試算表</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
          <button class="pill-btn primary small" id="linkSheetBtn">🔗 連結／建立專屬工作表</button>
@@ -652,7 +652,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <div class="step-head"><span class="step-badge num" style="--badge-color:var(--peach);">📊</span><h2>匯出成果</h2></div>
       <div class="export-grid">
         <button class="export-btn" id="exportJpgBtn"><div class="ic">🖼️</div><div class="t">下載畫面 JPG</div><div class="s">完整儲存含分數與時間</div></button>
-        <button class="export-btn" id="exportXlsxBtn"><div class="ic">📊</div><div class="t">下載成績 Excel</div><div class="s">含加分、評分、職位 (無總分)</div></button>
+        <button class="export-btn" id="exportXlsxBtn"><div class="ic">📊</div><div class="t">下載成績 Excel</div><div class="s">含加分、評分、職位、累計與總分</div></button>
       </div>
     </div>
   </div>
@@ -1052,8 +1052,11 @@ async function linkClassSheet(){
 }
 
 function getStudentScoreObj(stuId){
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [] };
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [], lastPushedPlusScore: 0, dayStartPlusScore: 0, lastPushDate: '' };
   if(!cur.studentScores[stuId].scoreLog) cur.studentScores[stuId].scoreLog = [];
+  if(cur.studentScores[stuId].lastPushedPlusScore === undefined) cur.studentScores[stuId].lastPushedPlusScore = 0;
+  if(cur.studentScores[stuId].dayStartPlusScore === undefined) cur.studentScores[stuId].dayStartPlusScore = 0;
+  if(cur.studentScores[stuId].lastPushDate === undefined) cur.studentScores[stuId].lastPushDate = '';
   return cur.studentScores[stuId];
 }
 
@@ -1101,6 +1104,16 @@ document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
   toast('已新增一筆紀錄');
 });
 
+/* ===================================================================
+   雲端試算表推送／拉回：
+   - 每次「推送」都會新增一組「時間戳記」欄位（本次加分、本次作品分），
+     絕不覆蓋先前欄位，方便老師回顧每一堂課的加分狀況。
+   - 「本次加分」欄位記錄的是「距離上次推送以來新增的加分」（本堂課的加分），
+     而不是累計總分，這樣每一欄才能代表當次上課的狀況。
+   - 表尾另外維護「累計加分」「累計扣分」「總分」三個固定統計欄位，
+     這三欄每次推送都會重新計算覆蓋（因為它們本來就是「目前為止」的總計，
+     不是單次紀錄）。
+   =================================================================== */
 async function pushScoresToSheet(silent){
   if(!cur.sheetId){ if(!silent) toast('請先連結試算表'); return; }
   if(!window.accessToken){ if(!silent) window.requireAuth('pushSheet'); return; }
@@ -1113,76 +1126,87 @@ async function pushScoresToSheet(silent){
       existingRows = getData.values || [];
     }catch(err){}
 
-    const extraColumnsMap = {};
-    const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    
-    let plusScoreColName = `${dateStr}-加分`;
-    let projectScoreColName = `${dateStr}-作品分`;
-    
     const existingHeader = existingRows[0] || [];
-    const oldPlusMatch = existingHeader.find(h => h.includes('-加分') && h.startsWith(dateStr));
-    const oldProjMatch = existingHeader.find(h => h.includes('-作品分') && h.startsWith(dateStr));
-    if(oldPlusMatch) plusScoreColName = oldPlusMatch;
-    if(oldProjMatch) projectScoreColName = oldProjMatch;
+    const now = new Date();
+    // 只用「年-月-日」當作欄位鍵值：同一天不管推送幾次都算同一欄，換日期才會新增一欄
+    const isoDateKey = now.toLocaleDateString('sv-SE'); // yyyy-mm-dd，用來判斷是否跨日，穩定不受地區格式影響
+    const dateStr = now.toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
+    const newPlusCol = `${dateStr} 加分`;
+    const newGradeCol = `${dateStr} 作品分`;
 
-    const baseHeader = ['學生ID','座號','姓名','工作角色','性別','分數', plusScoreColName, projectScoreColName, '最近更新時間'];
-    
-    let actualHeader = baseHeader;
-    let extraHeaders = [];
-    if (existingHeader.length > 0) {
-      extraHeaders = existingHeader.filter(h => 
-        !['學生ID','座號','姓名','工作角色','性別','分數', '最近更新時間'].includes(h) && 
-        !h.includes('-加分') && 
-        !h.includes('-作品分') &&
-        h !== '總分'
-      );
-      actualHeader = [...baseHeader, ...extraHeaders];
+    const FIXED_BASE = ['學生ID','座號','姓名','工作角色','性別','分數'];
+    const FIXED_SUMMARY = ['累計加分','累計扣分','總分','最近更新時間'];
+
+    // 找出既有欄位中屬於「歷史加分／作品分紀錄」的欄位（依名稱結尾判斷），一律保留、絕不覆蓋
+    // 其餘不屬於固定欄位、也不是統計欄位的，視為老師自行在 Excel 新增的「額外欄位」，同樣保留
+    let historyCols = [];
+    let extraCols = [];
+    if(existingHeader.length > 0){
+      existingHeader.forEach(h=>{
+        if(FIXED_BASE.includes(h) || FIXED_SUMMARY.includes(h)) return;
+        if(/ 加分$/.test(h) || / 作品分$/.test(h)) historyCols.push(h);
+        else extraCols.push(h);
+      });
     }
+    // 今天的欄位如果已經存在（同一天推送過），就沿用同一欄；只有換了新日期才會新增欄位
+    if(!historyCols.includes(newPlusCol)) historyCols.push(newPlusCol);
+    if(!historyCols.includes(newGradeCol)) historyCols.push(newGradeCol);
 
-    const idIdx = existingHeader.indexOf('學生ID');
-    for(let i=1; i<existingRows.length; i++){
-      const row = existingRows[i];
-      let seatNo = '', name = '', sid = '';
-      if(idIdx !== -1) sid = String(row[idIdx] || '').trim();
-      if(existingHeader.indexOf('座號') !== -1) seatNo = String(row[existingHeader.indexOf('座號')] || '').trim();
-      else seatNo = String(row[0] || '').trim();
-      
-      if(existingHeader.indexOf('姓名') !== -1) name = String(row[existingHeader.indexOf('姓名')] || '').trim();
-      else name = String(row[1] || '').trim();
-      
-      if(seatNo || name || sid) {
-          let extraData = [];
-          if(extraHeaders.length > 0) {
-              extraHeaders.forEach(eh => {
-                  let idx = existingHeader.indexOf(eh);
-                  extraData.push(idx !== -1 ? (row[idx]||'') : '');
-              })
-          }
-          const key = sid ? `id_${sid}` : `${seatNo}_${name}`;
-          extraColumnsMap[key] = extraData;
+    const header = [...FIXED_BASE, ...historyCols, ...extraCols, ...FIXED_SUMMARY];
+
+    // 讀取舊資料，以「學生ID」或「座號+姓名」為 key，保留每位學生所有舊欄位的值
+    const rowDataMap = {};
+    if(existingHeader.length > 0){
+      const idIdx = existingHeader.indexOf('學生ID');
+      const seatIdx = existingHeader.indexOf('座號');
+      const nameIdx = existingHeader.indexOf('姓名');
+      for(let i=1; i<existingRows.length; i++){
+        const row = existingRows[i];
+        const sid = idIdx>-1 ? String(row[idIdx]||'').trim() : '';
+        const seatNo = seatIdx>-1 ? String(row[seatIdx]||'').trim() : '';
+        const name = nameIdx>-1 ? String(row[nameIdx]||'').trim() : '';
+        if(!sid && !seatNo && !name) continue;
+        const map = {};
+        existingHeader.forEach((h,ci)=>{ map[h] = row[ci] !== undefined ? row[ci] : ''; });
+        const key = sid ? `id_${sid}` : `${seatNo}_${name}`;
+        rowDataMap[key] = map;
       }
     }
 
-    const newRows = [actualHeader];
-
+    const newRows = [header];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
       const roles = (cur.studentRoles[s.id] || []).join('、');
-      
-      let extraData = extraColumnsMap[`id_${s.id}`] || extraColumnsMap[`${s.seatNo || ''}_${s.name}`] || Array(extraHeaders.length).fill('');
-      
-      newRows.push([
-        s.id,
-        s.seatNo || '', 
-        s.name, 
-        roles,
-        s.gender==='M'?'男':'女', 
-        s.score !== null && s.score !== undefined ? s.score : '',
-        sc.plusScore, 
-        `${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`, 
-        sc.lastUpdated || '尚未記錄', 
-        ...extraData
-      ]);
+      const oldRow = rowDataMap[`id_${s.id}`] || rowDataMap[`${s.seatNo||''}_${s.name}`] || {};
+
+      // 若今天是「新的一天」第一次推送，把「今天開始前的累計加分」記錄下來當作今天的基準點
+      if(sc.lastPushDate !== isoDateKey){
+        sc.dayStartPlusScore = sc.lastPushedPlusScore || 0;
+        sc.lastPushDate = isoDateKey;
+      }
+      // 今天的加分＝目前累計加分 － 今天開始前的累計加分（同一天重複推送會重新算出當天完整加總，而不是疊加）
+      const sessionDelta = sc.plusScore - sc.dayStartPlusScore;
+
+      // 累計加分／累計扣分：依全部歷史紀錄(scoreLog)加總，永遠反映「目前為止」的總計
+      let totalPlus = 0, totalMinus = 0;
+      (sc.scoreLog || []).forEach(entry=>{
+        if(entry.delta >= 0) totalPlus += entry.delta; else totalMinus += entry.delta;
+      });
+      const baseScore = (s.score !== null && s.score !== undefined) ? s.score : 0;
+      const totalScore = baseScore + sc.plusScore;
+
+      const rowArr = [ s.id, s.seatNo||'', s.name, roles, s.gender==='M'?'男':'女', (s.score!==null && s.score!==undefined) ? s.score : '' ];
+
+      historyCols.forEach(col=>{
+        if(col === newPlusCol) rowArr.push(sessionDelta);
+        else if(col === newGradeCol) rowArr.push(`${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`);
+        else rowArr.push(oldRow[col] !== undefined ? oldRow[col] : '');
+      });
+
+      extraCols.forEach(col=>{ rowArr.push(oldRow[col] !== undefined ? oldRow[col] : ''); });
+
+      rowArr.push(totalPlus, totalMinus, totalScore, sc.lastUpdated || '尚未記錄');
+      newRows.push(rowArr);
     });
 
     const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1?valueInputOption=RAW`, {
@@ -1191,14 +1215,19 @@ async function pushScoresToSheet(silent){
       body: JSON.stringify({ values: newRows })
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
-    if(!silent) toast('已成功更新加分與時間至雲端工作表！');
+
+    // 推送成功後，把「上次推送當下的累計加分」更新為目前值，作為未來新的一天的基準點
+    allStudents().forEach(s=>{ const sc = getStudentScoreObj(s.id); sc.lastPushedPlusScore = sc.plusScore; });
+    saveDB();
+
+    if(!silent) toast(`已更新「${dateStr}」這一欄的加分紀錄至雲端工作表！`);
   }catch(e){ if(!silent) toast('推送失敗：' + e.message, true); }
 }
 
 async function pullScoresFromSheet(){
   if(!cur.sheetId){ toast('請先連結試算表'); return; }
   if(!window.accessToken){ window.requireAuth('pullSheet'); return; }
-  if(!confirm('確定從雲端工作表拉回最新資料嗎？')) return;
+  if(!confirm('確定從雲端工作表拉回最新資料嗎？（將以「累計加分／累計扣分」欄位還原目前總分，並以最新一欄作品分還原評級）')) return;
   try{
     const tabName = getTargetSheetTabName();
     const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1:Z2000`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
@@ -1211,9 +1240,13 @@ async function pullScoresFromSheet(){
     const seatIdx = header.indexOf('座號');
     const nameIdx = header.indexOf('姓名');
     const scoreIdx = header.indexOf('分數');
-    const plusIdx = header.findIndex(h => h.includes('-加分'));
-    const evalIdx = header.findIndex(h => h.includes('-作品分'));
+    const totalPlusIdx = header.indexOf('累計加分');
+    const totalMinusIdx = header.indexOf('累計扣分');
     const timeIdx = header.indexOf('最近更新時間');
+
+    // 找出「最新一欄」的作品分紀錄（欄名以「 作品分」結尾，且非統計欄）
+    const gradeCols = header.map((h,i)=>({h,i})).filter(o=> / 作品分$/.test(o.h));
+    const evalIdx = gradeCols.length ? gradeCols[gradeCols.length-1].i : -1;
 
     let updated = 0;
     for(let i=1; i<rows.length; i++){
@@ -1231,9 +1264,16 @@ async function pullScoresFromSheet(){
             let num = Number(r[scoreIdx]);
             s.score = isNaN(num) ? null : num;
         }
-        
+
         const sc = getStudentScoreObj(s.id);
-        if(plusIdx>-1 && r[plusIdx]!==undefined && r[plusIdx]!=='') sc.plusScore = Number(r[plusIdx])||0;
+        if(totalPlusIdx>-1 && totalMinusIdx>-1){
+          const tp = Number(r[totalPlusIdx]) || 0;
+          const tm = Number(r[totalMinusIdx]) || 0;
+          sc.plusScore = tp + tm; // tm 已為負值，相加即為淨累計加分
+          sc.lastPushedPlusScore = sc.plusScore; // 避免下次推送誤算出過大的本次加分
+          sc.dayStartPlusScore = sc.plusScore; // 重設今天的基準點，避免拉回後下次推送的當日加分計算錯誤
+          sc.lastPushDate = ''; // 讓下次推送時重新判斷是否為新的一天
+        }
         if(evalIdx>-1 && r[evalIdx]){
           const valStr = String(r[evalIdx]).trim();
           const lastChar = valStr.slice(-1);
@@ -1932,9 +1972,12 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur.seats){ toast('請先排入座位'); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr}-加分`,`${dateStr}-作品分`,'最近更新時間']];
+    const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr}-加分`,`${dateStr}-作品分`,'累計加分','累計扣分','總分','最近更新時間']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
+      let totalPlus = 0, totalMinus = 0;
+      (sc.scoreLog || []).forEach(entry=>{ if(entry.delta>=0) totalPlus += entry.delta; else totalMinus += entry.delta; });
+      const baseScore = (s.score !== null && s.score !== undefined) ? s.score : 0;
       aoa.push([ 
           s.seatNo, 
           s.name, 
@@ -1943,6 +1986,9 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
           s.score !== null && s.score !== undefined ? s.score : '',
           sc.plusScore, 
           `${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`, 
+          totalPlus,
+          totalMinus,
+          baseScore + sc.plusScore,
           sc.lastUpdated || '' 
       ]);
     });
