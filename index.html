@@ -841,7 +841,7 @@ function switchView(view){
   document.getElementById('classroomScoreView').style.display = (view === 'score') ? 'block' : 'none';
   document.getElementById('classroomHeaderTools').style.display = (view !== 'dash') ? 'flex' : 'none';
 
-  if(view === 'config' || view === 'score') checkDayRollover();
+  checkDayRollover();
 
   if(view === 'dash') renderDashboard();
   else if(view === 'config') renderConfigClassroom();
@@ -1110,15 +1110,26 @@ async function linkClassSheet(){
 }
 
 function getStudentScoreObj(stuId){
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [] };
-  if(!cur.studentScores[stuId].scoreLog) cur.studentScores[stuId].scoreLog = [];
-  return cur.studentScores[stuId];
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [], totalPlusLifetime: 0, totalMinusLifetime: 0 };
+  const sc = cur.studentScores[stuId];
+  if(!sc.scoreLog) sc.scoreLog = [];
+  // 舊資料遷移：如果還沒有「終身累計」欄位，先用現有的 scoreLog 加總當作起始值
+  // （注意：scoreLog 為了節省空間只保留最近 200 筆，所以之後一律改用這兩個獨立累計欄位計算總分，不再依賴 scoreLog 加總）
+  if(sc.totalPlusLifetime === undefined || sc.totalMinusLifetime === undefined){
+    let tp = 0, tm = 0;
+    sc.scoreLog.forEach(entry=>{ if(entry.delta>=0) tp += entry.delta; else tm += entry.delta; });
+    sc.totalPlusLifetime = tp;
+    sc.totalMinusLifetime = tm;
+  }
+  return sc;
 }
 
 function logScoreChange(stuId, delta, reason){
   const sc = getStudentScoreObj(stuId);
   sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason: reason || (delta>=0 ? '課堂加分' : '課堂扣分') });
-  if(sc.scoreLog.length>200) sc.scoreLog = sc.scoreLog.slice(-200);
+  if(sc.scoreLog.length>200) sc.scoreLog = sc.scoreLog.slice(-200); // 只影響「歷史紀錄」清單顯示筆數，不影響總分計算
+  if(delta>=0) sc.totalPlusLifetime = (sc.totalPlusLifetime||0) + delta;
+  else sc.totalMinusLifetime = (sc.totalMinusLifetime||0) + delta;
 }
 
 function openHistoryModal(stuId){
@@ -1236,12 +1247,10 @@ async function pushScoresToSheet(silent, forceDate){
       // 網頁本身每天會自動歸零，所以「目前的加分」就是當天的加分，不需要再額外計算差值
       const todaysPlus = sc.plusScore;
 
-      // 累計加分／累計扣分／總分：依全部歷史紀錄(scoreLog)加總，永遠反映「開學至今」的總計，
-      // 不受每天網頁歸零的影響
-      let totalPlus = 0, totalMinus = 0;
-      (sc.scoreLog || []).forEach(entry=>{
-        if(entry.delta >= 0) totalPlus += entry.delta; else totalMinus += entry.delta;
-      });
+      // 累計加分／累計扣分／總分：用不會被截斷的「終身累計」欄位計算，永遠反映「開學至今」的總計，
+      // 不受每天網頁歸零、也不受歷史紀錄清單只保留最近 200 筆的影響
+      const totalPlus = sc.totalPlusLifetime || 0;
+      const totalMinus = sc.totalMinusLifetime || 0;
       const baseScore = (s.score !== null && s.score !== undefined) ? s.score : 0;
       const totalScore = baseScore + totalPlus + totalMinus;
 
@@ -1274,7 +1283,7 @@ async function pushScoresToSheet(silent, forceDate){
 async function pullScoresFromSheet(){
   if(!cur.sheetId){ toast('請先連結試算表'); return; }
   if(!window.accessToken){ window.requireAuth('pullSheet'); return; }
-  if(!confirm('確定從雲端工作表拉回最新資料嗎？（會用「今天」那一欄的加分還原今日進度，並以最新一欄作品分還原評級；不會動到雲端上的歷史紀錄）')) return;
+  if(!confirm('確定從雲端工作表拉回最新資料嗎？（會用「今天」那一欄的加分還原今日進度、用累計加分／扣分欄位還原總分、並以最新一欄作品分還原評級）')) return;
   try{
     const tabName = getTargetSheetTabName();
     const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1:Z2000`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
@@ -1287,6 +1296,8 @@ async function pullScoresFromSheet(){
     const seatIdx = header.indexOf('座號');
     const nameIdx = header.indexOf('姓名');
     const scoreIdx = header.indexOf('分數');
+    const totalPlusIdx = header.indexOf('累計加分');
+    const totalMinusIdx = header.indexOf('累計扣分');
     const timeIdx = header.indexOf('最近更新時間');
 
     // 只找「今天」這一欄的加分，用來還原今天目前為止的進度（不是開學至今的總分）
@@ -1318,6 +1329,13 @@ async function pullScoresFromSheet(){
         if(todayPlusIdx>-1 && r[todayPlusIdx]!==undefined && r[todayPlusIdx]!==''){
           const v = Number(r[todayPlusIdx]);
           if(!isNaN(v)) sc.plusScore = v;
+        }
+        // 若這台裝置本機沒有完整的終身累計紀錄（例如換了瀏覽器／裝置），用雲端的累計欄位還原，確保總分不會不見
+        if(totalPlusIdx>-1 && totalMinusIdx>-1){
+          const tp = Number(r[totalPlusIdx]) || 0;
+          const tm = Number(r[totalMinusIdx]) || 0;
+          sc.totalPlusLifetime = tp;
+          sc.totalMinusLifetime = tm;
         }
         if(evalIdx>-1 && r[evalIdx]){
           const valStr = String(r[evalIdx]).trim();
@@ -2020,8 +2038,8 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
     const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr} 今日加分`,`${dateStr} 今日作品分`,'累計加分','累計扣分','總分','最近更新時間']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
-      let totalPlus = 0, totalMinus = 0;
-      (sc.scoreLog || []).forEach(entry=>{ if(entry.delta>=0) totalPlus += entry.delta; else totalMinus += entry.delta; });
+      const totalPlus = sc.totalPlusLifetime || 0;
+      const totalMinus = sc.totalMinusLifetime || 0;
       const baseScore = (s.score !== null && s.score !== undefined) ? s.score : 0;
       aoa.push([ 
           s.seatNo, 
@@ -2064,6 +2082,11 @@ function renderConfigClassroom(){
 
 // 系統啟動程序
 loadDB(); renderHeaderSelects(); switchView('dash');
+
+// 保險機制：如果頁面開著跨夜沒有重新整理或切換畫面，
+// 一旦分頁重新被看到、或每隔一段時間，也主動檢查一次是否跨天
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkDayRollover(); });
+setInterval(checkDayRollover, 5*60*1000);
 
 </script>
 </body>
