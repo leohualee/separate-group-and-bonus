@@ -339,7 +339,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
     <div style="background:var(--mint);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
       <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">📊 獨立工作表雙向同步</div>
-      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄（同一天內重複推送只會更新當天那一欄，不會覆蓋前幾天的紀錄）；Excel 自行增加的額外欄位也會完全保留。</strong></p>
+      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄（同一天內重複推送只會更新當天那一欄）；Excel 自行增加的額外欄位也會完全保留。</strong><br>📅 <strong>換日期時，網頁上的「今日加分」與「今日作品評級」會自動歸零（如已連結雲端且已授權，會先把前一天的最終加分存檔）；「累計加分」「累計扣分」「總分」會持續累加，不會因歸零而遺失。</strong></p>
       <div id="sheetLinkStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結試算表</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
          <button class="pill-btn primary small" id="linkSheetBtn">🔗 連結／建立專屬工作表</button>
@@ -697,7 +697,8 @@ function blankClass(name){
     seatConfig:{ rows:5, cols:6, layoutMode:'grid', podCols:3, podDeskLayout:'2x2', podFacing:'podium' }, seats:null,
     studentRoles:{}, studentScores:{},
     jobsList:['組長', '工具長', '材料長', '秘書長', '環境長', '小老師'],
-    sheetId:null, sheetUrl:null, autoSync:false
+    sheetId:null, sheetUrl:null, autoSync:false,
+    lastActiveDate: new Date().toLocaleDateString('sv-SE')
   };
 }
 
@@ -732,6 +733,7 @@ function loadDB(){
   if(!cur.studentScores) cur.studentScores = {};
   if(cur.autoSync === undefined) cur.autoSync = false;
   if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '環境長', '小老師'];
+  if(!cur.lastActiveDate) cur.lastActiveDate = new Date().toLocaleDateString('sv-SE');
   if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
 }
 
@@ -778,12 +780,68 @@ window.executePendingAction = function() {
   window.pendingAction = null;
 }
 
+/* ===================================================================
+   新的一天自動歸零：
+   - 每個班級記錄 lastActiveDate（上次使用的日期）。
+   - 只要進入該班級的「設定」或「計分面板」畫面時發現日期已經跨天，
+     就會（若已連結雲端試算表且已授權）先把前一天的最終加分推送存檔，
+     再把「今日加分」與「今日作品評級」歸零，讓網頁在新的一天永遠是
+     乾淨的狀態，但所有歷史紀錄（加分歷史 log、雲端試算表每日欄位、
+     累計加分／扣分／總分）完全不會遺失。
+   =================================================================== */
+function todayKey(){ return new Date().toLocaleDateString('sv-SE'); }
+
+function resetClassScoresForNewDay(cls, prevDateKey){
+  allStudentsOf(cls).forEach(s=>{
+    const sc = cls.studentScores[s.id];
+    if(sc){
+      sc.plusScore = 0;
+      sc.projectGrade = '作品';
+      sc.projectModifier = '無';
+    }
+  });
+  cls.lastActiveDate = todayKey();
+  saveDB();
+  toast(`偵測到新的一天，「${cls.name}」的加分與評級已歸零，先前紀錄仍完整保留在雲端試算表與加分歷史紀錄中`);
+  if(cur === cls){
+    if(currentView==='score') renderScoreSeats();
+    else if(currentView==='config') renderConfigSeats();
+  }
+}
+
+function allStudentsOf(cls){ return [...cls.boys, ...cls.girls]; }
+
+function checkDayRollover(){
+  if(!cur) return;
+  const tKey = todayKey();
+  if(!cur.lastActiveDate){ cur.lastActiveDate = tKey; return; } // 第一次使用，只記錄基準日期，不歸零
+  if(cur.lastActiveDate === tKey) return; // 還是同一天，不用處理
+
+  const prevDateKey = cur.lastActiveDate;
+  const targetClass = cur;
+  if(targetClass.sheetId && window.accessToken){
+    // 先把前一天的最終加分推送到雲端該日欄位存檔，完成後再歸零
+    const prevDate = new Date(prevDateKey + 'T12:00:00');
+    pushScoresToSheet(true, prevDate).then(ok=>{
+      resetClassScoresForNewDay(targetClass, prevDateKey);
+      if(!ok) toast('⚠️ 前一天的加分推送雲端失敗，已先歸零，請盡快手動「推送」確認雲端資料完整', true);
+    });
+  } else {
+    resetClassScoresForNewDay(targetClass, prevDateKey);
+    if(targetClass.sheetId){
+      toast('⚠️ 尚未授權雲端連線，前一天的加分未同步，請重新連結後手動推送', true);
+    }
+  }
+}
+
 function switchView(view){
   currentView = view;
   document.getElementById('dashboardView').style.display = (view === 'dash') ? 'block' : 'none';
   document.getElementById('classroomConfigView').style.display = (view === 'config') ? 'block' : 'none';
   document.getElementById('classroomScoreView').style.display = (view === 'score') ? 'block' : 'none';
   document.getElementById('classroomHeaderTools').style.display = (view !== 'dash') ? 'flex' : 'none';
+
+  if(view === 'config' || view === 'score') checkDayRollover();
 
   if(view === 'dash') renderDashboard();
   else if(view === 'config') renderConfigClassroom();
@@ -1052,11 +1110,8 @@ async function linkClassSheet(){
 }
 
 function getStudentScoreObj(stuId){
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [], lastPushedPlusScore: 0, dayStartPlusScore: 0, lastPushDate: '' };
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無', lastUpdated: '', scoreLog: [] };
   if(!cur.studentScores[stuId].scoreLog) cur.studentScores[stuId].scoreLog = [];
-  if(cur.studentScores[stuId].lastPushedPlusScore === undefined) cur.studentScores[stuId].lastPushedPlusScore = 0;
-  if(cur.studentScores[stuId].dayStartPlusScore === undefined) cur.studentScores[stuId].dayStartPlusScore = 0;
-  if(cur.studentScores[stuId].lastPushDate === undefined) cur.studentScores[stuId].lastPushDate = '';
   return cur.studentScores[stuId];
 }
 
@@ -1114,7 +1169,7 @@ document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
      這三欄每次推送都會重新計算覆蓋（因為它們本來就是「目前為止」的總計，
      不是單次紀錄）。
    =================================================================== */
-async function pushScoresToSheet(silent){
+async function pushScoresToSheet(silent, forceDate){
   if(!cur.sheetId){ if(!silent) toast('請先連結試算表'); return; }
   if(!window.accessToken){ if(!silent) window.requireAuth('pushSheet'); return; }
   try{
@@ -1127,9 +1182,8 @@ async function pushScoresToSheet(silent){
     }catch(err){}
 
     const existingHeader = existingRows[0] || [];
-    const now = new Date();
-    // 只用「年-月-日」當作欄位鍵值：同一天不管推送幾次都算同一欄，換日期才會新增一欄
-    const isoDateKey = now.toLocaleDateString('sv-SE'); // yyyy-mm-dd，用來判斷是否跨日，穩定不受地區格式影響
+    const now = forceDate || new Date();
+    // 只用「月-日」當作欄位鍵值：同一天不管推送幾次都算同一欄，換日期才會新增一欄
     const dateStr = now.toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
     const newPlusCol = `${dateStr} 加分`;
     const newGradeCol = `${dateStr} 作品分`;
@@ -1179,26 +1233,22 @@ async function pushScoresToSheet(silent){
       const roles = (cur.studentRoles[s.id] || []).join('、');
       const oldRow = rowDataMap[`id_${s.id}`] || rowDataMap[`${s.seatNo||''}_${s.name}`] || {};
 
-      // 若今天是「新的一天」第一次推送，把「今天開始前的累計加分」記錄下來當作今天的基準點
-      if(sc.lastPushDate !== isoDateKey){
-        sc.dayStartPlusScore = sc.lastPushedPlusScore || 0;
-        sc.lastPushDate = isoDateKey;
-      }
-      // 今天的加分＝目前累計加分 － 今天開始前的累計加分（同一天重複推送會重新算出當天完整加總，而不是疊加）
-      const sessionDelta = sc.plusScore - sc.dayStartPlusScore;
+      // 網頁本身每天會自動歸零，所以「目前的加分」就是當天的加分，不需要再額外計算差值
+      const todaysPlus = sc.plusScore;
 
-      // 累計加分／累計扣分：依全部歷史紀錄(scoreLog)加總，永遠反映「目前為止」的總計
+      // 累計加分／累計扣分／總分：依全部歷史紀錄(scoreLog)加總，永遠反映「開學至今」的總計，
+      // 不受每天網頁歸零的影響
       let totalPlus = 0, totalMinus = 0;
       (sc.scoreLog || []).forEach(entry=>{
         if(entry.delta >= 0) totalPlus += entry.delta; else totalMinus += entry.delta;
       });
       const baseScore = (s.score !== null && s.score !== undefined) ? s.score : 0;
-      const totalScore = baseScore + sc.plusScore;
+      const totalScore = baseScore + totalPlus + totalMinus;
 
       const rowArr = [ s.id, s.seatNo||'', s.name, roles, s.gender==='M'?'男':'女', (s.score!==null && s.score!==undefined) ? s.score : '' ];
 
       historyCols.forEach(col=>{
-        if(col === newPlusCol) rowArr.push(sessionDelta);
+        if(col === newPlusCol) rowArr.push(todaysPlus);
         else if(col === newGradeCol) rowArr.push(`${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`);
         else rowArr.push(oldRow[col] !== undefined ? oldRow[col] : '');
       });
@@ -1216,18 +1266,15 @@ async function pushScoresToSheet(silent){
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
 
-    // 推送成功後，把「上次推送當下的累計加分」更新為目前值，作為未來新的一天的基準點
-    allStudents().forEach(s=>{ const sc = getStudentScoreObj(s.id); sc.lastPushedPlusScore = sc.plusScore; });
-    saveDB();
-
     if(!silent) toast(`已更新「${dateStr}」這一欄的加分紀錄至雲端工作表！`);
-  }catch(e){ if(!silent) toast('推送失敗：' + e.message, true); }
+    return true;
+  }catch(e){ if(!silent) toast('推送失敗：' + e.message, true); return false; }
 }
 
 async function pullScoresFromSheet(){
   if(!cur.sheetId){ toast('請先連結試算表'); return; }
   if(!window.accessToken){ window.requireAuth('pullSheet'); return; }
-  if(!confirm('確定從雲端工作表拉回最新資料嗎？（將以「累計加分／累計扣分」欄位還原目前總分，並以最新一欄作品分還原評級）')) return;
+  if(!confirm('確定從雲端工作表拉回最新資料嗎？（會用「今天」那一欄的加分還原今日進度，並以最新一欄作品分還原評級；不會動到雲端上的歷史紀錄）')) return;
   try{
     const tabName = getTargetSheetTabName();
     const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1:Z2000`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
@@ -1240,9 +1287,11 @@ async function pullScoresFromSheet(){
     const seatIdx = header.indexOf('座號');
     const nameIdx = header.indexOf('姓名');
     const scoreIdx = header.indexOf('分數');
-    const totalPlusIdx = header.indexOf('累計加分');
-    const totalMinusIdx = header.indexOf('累計扣分');
     const timeIdx = header.indexOf('最近更新時間');
+
+    // 只找「今天」這一欄的加分，用來還原今天目前為止的進度（不是開學至今的總分）
+    const todayDateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
+    const todayPlusIdx = header.indexOf(`${todayDateStr} 加分`);
 
     // 找出「最新一欄」的作品分紀錄（欄名以「 作品分」結尾，且非統計欄）
     const gradeCols = header.map((h,i)=>({h,i})).filter(o=> / 作品分$/.test(o.h));
@@ -1266,13 +1315,9 @@ async function pullScoresFromSheet(){
         }
 
         const sc = getStudentScoreObj(s.id);
-        if(totalPlusIdx>-1 && totalMinusIdx>-1){
-          const tp = Number(r[totalPlusIdx]) || 0;
-          const tm = Number(r[totalMinusIdx]) || 0;
-          sc.plusScore = tp + tm; // tm 已為負值，相加即為淨累計加分
-          sc.lastPushedPlusScore = sc.plusScore; // 避免下次推送誤算出過大的本次加分
-          sc.dayStartPlusScore = sc.plusScore; // 重設今天的基準點，避免拉回後下次推送的當日加分計算錯誤
-          sc.lastPushDate = ''; // 讓下次推送時重新判斷是否為新的一天
+        if(todayPlusIdx>-1 && r[todayPlusIdx]!==undefined && r[todayPlusIdx]!==''){
+          const v = Number(r[todayPlusIdx]);
+          if(!isNaN(v)) sc.plusScore = v;
         }
         if(evalIdx>-1 && r[evalIdx]){
           const valStr = String(r[evalIdx]).trim();
@@ -1686,7 +1731,7 @@ function getBaseSeatHtml(occ, dropAttrs, showScoreControls = false){
       const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
       controlsHtml = `
         <div class="seat-score-row"><select class="grade-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的作品評級">${gradeOpts}</select><select class="mod-sel" data-stuid="${s.id}" aria-label="${escapeHtml(s.name)}的評級加減註記">${modOpts}</select></div>
-        <div class="score-control-box"><span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn hist-open-btn" data-stuid="${s.id}" aria-label="查看${escapeHtml(s.name)}的加分歷史紀錄" title="歷史紀錄">📜</button><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" aria-label="為${escapeHtml(s.name)}加分">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" aria-label="為${escapeHtml(s.name)}扣分">▼</button></div></div>
+        <div class="score-control-box"><span>今日: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span><div class="score-control-btns"><button class="score-btn hist-open-btn" data-stuid="${s.id}" aria-label="查看${escapeHtml(s.name)}的加分歷史紀錄" title="歷史紀錄">📜</button><button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" aria-label="為${escapeHtml(s.name)}加分">▲</button><button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" aria-label="為${escapeHtml(s.name)}扣分">▼</button></div></div>
       `;
   }
 
@@ -1972,7 +2017,7 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur.seats){ toast('請先排入座位'); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr}-加分`,`${dateStr}-作品分`,'累計加分','累計扣分','總分','最近更新時間']];
+    const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr} 今日加分`,`${dateStr} 今日作品分`,'累計加分','累計扣分','總分','最近更新時間']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
       let totalPlus = 0, totalMinus = 0;
@@ -1988,7 +2033,7 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
           `${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`, 
           totalPlus,
           totalMinus,
-          baseScore + sc.plusScore,
+          baseScore + totalPlus + totalMinus,
           sc.lastUpdated || '' 
       ]);
     });
