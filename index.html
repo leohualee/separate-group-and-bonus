@@ -319,11 +319,26 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
 <div class="modal-overlay" id="gdriveModal">
   <div class="modal-box">
-    <h3>☁️ Google 試算表工作表同步 (學年-班級)</h3>
+    <h3>☁️ Google 雲端同步</h3>
     <p>目前班級：<strong id="modalCurLabel"></strong></p>
 
+    <div style="background:var(--lilac);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
+      <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">🌐 跨裝置主資料庫同步（所有學年／班級／名單／分組／座位）</div>
+      <p style="font-size:0.8rem;margin-bottom:0.6rem;">此功能會把「整個資料庫」存成雲端硬碟裡的一個 JSON 檔（<code id="masterFileNameLabel">classroom_master_database.json</code>），不同裝置只要用同一個 Google 帳號授權，就能下載或上傳同一份資料，達到跨裝置同步。<br><strong>⚠️ 下載會直接覆蓋本機目前所有資料，上傳前建議先確認本機是最新版本。</strong></p>
+      <div id="masterSyncStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結雲端主資料庫</div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
+        <button class="pill-btn primary small" id="linkMasterDBBtn">🔍 尋找／建立雲端主資料庫</button>
+        <button class="pill-btn small" id="pushMasterDBBtn">⬆️ 上傳本機資料到雲端</button>
+        <button class="pill-btn small" id="pullMasterDBBtn">⬇️ 從雲端下載（覆蓋本機）</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer;">
+        <input type="checkbox" id="masterAutoSyncToggle" style="width:16px;height:16px;accent-color:var(--coral-deep);">
+        <span>資料異動時自動上傳到雲端主資料庫</span>
+      </label>
+    </div>
+
     <div style="background:var(--mint);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
-      <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">📊 獨立工作表雙向同步</div>
+      <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">📊 獨立工作表雙向同步（單一班級成績）</div>
       <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄（同一天內重複推送只會更新當天那一欄）；Excel 自行增加的額外欄位也會完全保留。</strong><br>📅 <strong>換日期時，網頁上的「今日加分」與「今日作品評級」會自動歸零（如已連結雲端且已授權，會先把前一天的最終加分存檔）；「累計加分」「累計扣分」「總分」會持續累加，不會因歸零而遺失。</strong></p>
       <div id="sheetLinkStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結試算表</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
@@ -663,6 +678,7 @@ const storage = {
 
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
 const uid = ()=> Math.random().toString(36).slice(2,9);
+const MASTER_DB_FILENAME = 'classroom_master_database.json';
 
 window.db = { years:{}, lastYearId:null, archivedYearsMeta:[] };
 window.curYear = null;
@@ -675,6 +691,7 @@ window.historyModalStuId = null;
 window.dashSelectedClasses = new Set(); 
 let currentView = 'dash';
 let autoPushTimer = null;
+let masterAutoPushTimer = null;
 let toastTimer;
 
 function blankClass(name){
@@ -701,6 +718,7 @@ function loadDB(){
   
   if(!db.years) db.years = {};
   if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
+  if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
 
   // 嘗試恢復上次選擇的學年
   if(db.lastYearId && db.years[db.lastYearId]){
@@ -746,7 +764,7 @@ function loadDB(){
   }
 }
 
-function saveDB(){
+function saveDB(skipMasterPush){
   const ok = storage.set('sgh_db_v15', JSON.stringify(db));
   const note = document.getElementById('saveNote');
   if(note){
@@ -761,12 +779,13 @@ function saveDB(){
   }
   updateSyncWarning();
   if(cur && cur.autoSync && cur.sheetId) debouncedAutoPush();
+  if(!skipMasterPush && db.masterSync && db.masterSync.autoSync && db.masterSync.fileId) debouncedMasterAutoPush();
 }
 
 function updateSyncWarning(){
   const bar = document.getElementById('syncWarningBar');
   if(!bar) return;
-  const shouldWarn = !!(cur && cur.autoSync && cur.sheetId && !window.accessToken);
+  const shouldWarn = !!((cur && cur.autoSync && cur.sheetId && !window.accessToken) || (db.masterSync && db.masterSync.autoSync && db.masterSync.fileId && !window.accessToken));
   bar.style.display = shouldWarn ? 'inline-flex' : 'none';
 }
 
@@ -786,6 +805,9 @@ window.executePendingAction = function() {
   if (window.pendingAction === 'linkSheet') linkClassSheet();
   else if (window.pendingAction === 'pushSheet') pushScoresToSheet(false);
   else if (window.pendingAction === 'pullSheet') pullScoresFromSheet();
+  else if (window.pendingAction === 'linkMasterDB') linkMasterDB();
+  else if (window.pendingAction === 'pushMasterDB') pushMasterDBToCloud(false);
+  else if (window.pendingAction === 'pullMasterDB') pullMasterDBFromCloud();
   window.pendingAction = null;
 }
 
@@ -865,8 +887,11 @@ function renderDashboard(){
     <div style="text-align:center; padding: 4rem 1rem; grid-column: 1 / -1;">
         <div style="font-size:3.5rem; margin-bottom:1rem;">📂</div>
         <h2 style="margin-bottom:0.5rem; font-size:1.8rem;">目前沒有任何學年度資料</h2>
-        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請先建立一個學年度，再開始新增班級座位表。</p>
-        <button class="pill-btn primary" onclick="document.getElementById('newYearBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">＋ 建立第一個學年度</button>
+        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請先建立一個學年度，再開始新增班級座位表。若您在其他裝置已經有資料，也可以點下方按鈕從雲端下載。</p>
+        <div style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;">
+          <button class="pill-btn primary" onclick="document.getElementById('newYearBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">＋ 建立第一個學年度</button>
+          <button class="pill-btn" onclick="document.getElementById('gdriveModalBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">☁️ 從雲端下載資料</button>
+        </div>
     </div>`;
   } else {
     html = yIds.map(yId => {
@@ -993,7 +1018,6 @@ function renderHeaderSelects(){
   // 根據是否有當前學年/班級，控制設定按鈕的顯示
   document.getElementById('classDivider').style.display = curYear ? 'inline-block' : 'none';
   cs.style.display = curYear ? 'inline-block' : 'none';
-  document.getElementById('gdriveModalBtn').style.display = cur ? 'inline-flex' : 'none';
 }
 
 document.getElementById('yearSelect').addEventListener('change', e=>{
@@ -1146,7 +1170,7 @@ document.getElementById('classNameInput').addEventListener('input', e=>{
 });
 
 const modal = document.getElementById('gdriveModal');
-document.getElementById('gdriveModalBtn').addEventListener('click', ()=>{ renderSheetStatus(); modal.style.display = 'flex'; });
+document.getElementById('gdriveModalBtn').addEventListener('click', ()=>{ renderSheetStatus(); renderMasterSyncStatus(); modal.style.display = 'flex'; });
 document.getElementById('gdriveCloseModalBtn').addEventListener('click', ()=>{ modal.style.display = 'none'; });
 
 document.getElementById('cloudBackupBtn').addEventListener('click', ()=>{
@@ -1171,6 +1195,136 @@ document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
   };
   reader.readAsText(file);
 });
+
+/* ============ 跨裝置主資料庫雲端同步 ============ */
+function renderMasterSyncStatus(){
+  const el = document.getElementById('masterSyncStatus');
+  if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
+  if(db.masterSync.fileId){
+    el.innerHTML = `已連結雲端主資料庫檔案${db.masterSync.lastSyncedAt ? '，上次同步於 <strong>'+escapeHtml(db.masterSync.lastSyncedAt)+'</strong>' : ''}。`;
+  } else {
+    el.textContent = '尚未連結雲端主資料庫';
+  }
+  document.getElementById('masterAutoSyncToggle').checked = !!db.masterSync.autoSync;
+  updateSyncWarning();
+}
+
+async function findMasterDBFileId(){
+  const q = encodeURIComponent(`name='${MASTER_DB_FILENAME}' and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
+    headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken })
+  });
+  const data = await res.json();
+  if(data.files && data.files.length > 0) return data.files[0].id;
+  return null;
+}
+
+async function linkMasterDB(){
+  toast('正在尋找雲端主資料庫...');
+  try{
+    let fileId = await findMasterDBFileId();
+    if(fileId){
+      db.masterSync.fileId = fileId;
+      saveDB(true);
+      renderMasterSyncStatus();
+      toast('已找到並連結現有的雲端主資料庫！可以選擇上傳或下載。');
+    } else {
+      if(!confirm('雲端硬碟裡尚未找到主資料庫檔案，是否要用「目前本機的資料」建立一份新的雲端主資料庫？')) return;
+      await pushMasterDBToCloud(false, true);
+    }
+  }catch(e){ toast('連結失敗：' + e.message, true); }
+}
+
+async function pushMasterDBToCloud(silent, isCreate){
+  if(!window.accessToken){ window.requireAuth('pushMasterDB'); return; }
+  try{
+    const content = JSON.stringify(db);
+    let fileId = db.masterSync ? db.masterSync.fileId : null;
+
+    if(!fileId && !isCreate){
+      fileId = await findMasterDBFileId();
+    }
+
+    if(!fileId){
+      // 建立新檔案
+      const boundary = '-------314159265358979323846';
+      const metadata = { name: MASTER_DB_FILENAME, mimeType: 'application/json' };
+      const body =
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+      const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': `multipart/related; boundary=${boundary}` }),
+        body
+      });
+      const createData = await createRes.json();
+      if(!createData.id) throw new Error('建立雲端檔案失敗');
+      fileId = createData.id;
+    } else {
+      // 更新既有檔案內容
+      const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': 'application/json' }),
+        body: content
+      });
+      if(!updateRes.ok) throw new Error('HTTP ' + updateRes.status);
+    }
+
+    db.masterSync.fileId = fileId;
+    db.masterSync.lastSyncedAt = new Date().toLocaleString('zh-TW');
+    saveDB(true);
+    renderMasterSyncStatus();
+    if(!silent) toast('已成功上傳本機資料到雲端主資料庫！');
+    return true;
+  }catch(e){ if(!silent) toast('上傳失敗：' + e.message, true); return false; }
+}
+
+async function pullMasterDBFromCloud(){
+  if(!window.accessToken){ window.requireAuth('pullMasterDB'); return; }
+  try{
+    let fileId = db.masterSync ? db.masterSync.fileId : null;
+    if(!fileId) fileId = await findMasterDBFileId();
+    if(!fileId){ toast('雲端尚未有主資料庫檔案，請先上傳一次'); return; }
+
+    if(!confirm('確定要從雲端下載資料嗎？這會完全覆蓋本機目前的所有學年度／班級／名單資料，此操作無法復原！')) return;
+
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken })
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const remoteDb = await res.json();
+    if(!remoteDb || !remoteDb.years){ toast('雲端檔案格式不正確', true); return; }
+
+    remoteDb.masterSync = { fileId, autoSync: (db.masterSync && db.masterSync.autoSync) || false, lastSyncedAt: new Date().toLocaleString('zh-TW') };
+    db = remoteDb;
+    loadDB();
+    saveDB(true);
+    renderHeaderSelects();
+    switchView('dash');
+    renderMasterSyncStatus();
+    toast('已成功從雲端下載並覆蓋本機資料！');
+  }catch(e){ toast('下載失敗：' + e.message, true); }
+}
+
+function debouncedMasterAutoPush(){
+  if(!db.masterSync || !db.masterSync.autoSync || !db.masterSync.fileId) return;
+  clearTimeout(masterAutoPushTimer);
+  masterAutoPushTimer = setTimeout(()=>{
+    if(window.accessToken) pushMasterDBToCloud(true);
+    else updateSyncWarning();
+  }, 1500);
+}
+
+document.getElementById('linkMasterDBBtn').addEventListener('click', ()=> window.requireAuth('linkMasterDB'));
+document.getElementById('pushMasterDBBtn').addEventListener('click', ()=> window.requireAuth('pushMasterDB'));
+document.getElementById('pullMasterDBBtn').addEventListener('click', ()=> window.requireAuth('pullMasterDB'));
+document.getElementById('masterAutoSyncToggle').addEventListener('change', e=>{
+  if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
+  db.masterSync.autoSync = e.target.checked;
+  saveDB(true);
+  if(e.target.checked && !db.masterSync.fileId) toast('請先點「尋找／建立雲端主資料庫」完成連結');
+});
+/* ============ 跨裝置主資料庫雲端同步結束 ============ */
 
 function sanitizeSheetTabName(name){
   let clean = String(name || '').replace(/[:\\\/\?\*\[\]]/g, '_').trim();
