@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統 (Firebase即時同步版)</title>
+<title>分組座位與即時計分系統 (Firebase 雲端全功能版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -47,12 +47,14 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .fb-status-pill.online{ background:var(--mint); color:#1d5c3a; }
 .fb-status-pill.offline{ background:#F6C9CE; color:#8A3B4D; }
 
+/* 對話視窗 */
 .modal-overlay{ position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center;z-index:1000;display:none; padding:1rem;overflow-y:auto; }
 .modal-box{ background:var(--white);border:3px solid var(--ink);border-radius:var(--radius); padding:2rem;width:100%;max-width:580px;box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh;overflow-y:auto; }
 .modal-box h3{margin-bottom:1rem;font-size:1.2rem;}
 .modal-box p{font-size:0.88rem;color:var(--ink-soft);margin-bottom:1rem;line-height:1.6;}
 .modal-btns{display:flex;gap:0.8rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap;}
 
+/* 頁面切換 */
 .dashboard-view { display:block; }
 .classroom-config-view { display:none; }
 .classroom-score-view { display:none; }
@@ -62,8 +64,9 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .year-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem; }
 .year-header h2 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; }
 
-.class-overview-card { position: relative; background: var(--white); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease; display:flex; flex-direction:column; }
+.class-overview-card { position: relative; background: var(--white); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); transition: transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
 .class-overview-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+.class-overview-card.selected { border-color: var(--coral-deep); box-shadow: 0 0 0 4px rgba(217,122,98,0.2); background: #FFF9F8; }
 .card-content { padding: 1.2rem; cursor: pointer; flex: 1; }
 .class-overview-card h3 { font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--ink); }
 .class-overview-card .meta { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.8rem; }
@@ -81,7 +84,7 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .field{margin-bottom:1.1rem;}
 .field label{display:block;font-size:0.82rem;font-weight:700;margin-bottom:0.35rem;color:var(--ink-soft);}
 textarea,.text-input{ width:100%;padding:0.7rem 0.9rem;border:2px solid var(--line);border-radius:10px; background:var(--paper);color:var(--ink);font-size:0.9rem;resize:vertical; }
-textarea{min-height:120px;}
+textarea{min-height:110px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
 
 .stepper{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:999px;overflow:hidden;}
@@ -91,23 +94,41 @@ textarea{min-height:120px;}
 .stepper-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.9rem;}
 .stepper-row .label{font-size:0.85rem;font-weight:700;min-width:6.2em;}
 
+.toggle-group{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;}
+.toggle-group button{ padding:0.5rem 1rem;border-radius:10px;border:2px solid var(--line); background:var(--paper);font-size:0.82rem;font-weight:700;color:var(--ink-soft); }
+.toggle-group button.active{border-color:var(--ink);background:var(--pink);color:var(--ink);}
+
 .roster-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
 table.roster{width:100%;border-collapse:collapse;font-size:0.85rem;}
 table.roster th{ text-align:left;font-size:0.72rem;color:var(--ink-soft);padding:0.4rem 0.5rem;border-bottom:2px solid var(--ink); }
 table.roster td{padding:0.35rem 0.5rem;border-bottom:1px dashed var(--line);}
+table.roster td[contenteditable]{outline:none;border-radius:6px;}
+table.roster td[contenteditable]:focus{background:var(--paper-deep);}
 table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-weight:900;padding:0 0.3rem; }
+
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;}
+.group-card{border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--paper);}
+.group-card .gh{padding:0.6rem 0.9rem;font-weight:800;font-family:'Baloo 2',sans-serif;background:var(--gcolor,var(--mint));display:flex;justify-content:space-between;align-items:center;}
+.group-card ul{list-style:none;margin:0;padding:0.5rem 0.4rem;}
+.group-card li{ display:flex;align-items:center;justify-content:space-between; padding:0.4rem 0.6rem;border-radius:8px;font-size:0.85rem; }
 
 .classroom-title-banner{ text-align:center;font-size:1.1rem;font-weight:900;color:var(--ink); margin-bottom:0.8rem; }
 .board-label{ text-align:center;font-size:0.85rem;font-weight:900;color:var(--ink); background:var(--butter);border:2px solid var(--ink);border-radius:8px; padding:0.5rem 1rem;margin:0 auto 1.2rem;max-width:300px;letter-spacing:0.2em; }
 .seat-grid-container{ overflow-x:auto;padding:1rem 0.5rem; }
 .seat-grid{display:grid;gap:0.7rem;justify-content:center;}
 
+/* 座位設計 */
 .seat{ width:148px;min-height:138px;border-radius:12px;border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem;font-size:0.75rem; display:flex;flex-direction:column;justify-content:space-between; user-select:none;transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow: hidden; }
+.seat:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
 .seat.gender-m { background: #25374C; color: #FFFFFF; border: 2px solid #142232; }
 .seat.gender-m .group-tag { background: rgba(0,0,0,0.4); color: #F5DDA0; }
+.seat.gender-m select, .seat.gender-m button.score-btn { background: #142232; color: #fff; border: 1px solid rgba(255,255,255,0.3); }
 .seat.gender-f { background: #FFF0F3; color: var(--ink); border: 2px solid #E295A8; }
 .seat.gender-f .group-tag { background: rgba(226,149,168,0.25); color: #8A3B4D; }
+.seat.gender-f select, .seat.gender-f button.score-btn { background: #fff; color: var(--ink); border: 1px solid #E295A8; }
 .seat .group-tag { font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block; white-space: nowrap; width: fit-content; }
+.seat .role-badges-wrap { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 90%; pointer-events: none; }
+.seat .role-badge { font-size: 0.58rem; font-weight: 900; background: var(--coral-deep); color: #FFF; padding: 1px 4px; border-radius: 4px; line-height: 1.2; white-space: nowrap; }
 .seat-top-row { display:flex; justify-content:space-between; align-items:center; width:100%; gap: 4px; overflow: hidden; margin-bottom: 2px; }
 .seat-name { font-weight:800; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex: 1; text-align: left; }
 .seat-no { font-size:0.65rem; white-space: nowrap; flex-shrink: 0; }
@@ -115,6 +136,20 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .score-control-btns { display: flex; gap: 1px; }
 .score-btn { width: 20px; height: 20px; font-size: 0.7rem; font-weight: bold; border-radius: 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; }
 .seat.empty{ background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
+
+/* 島嶼排法 */
+.pods-grid{ display:grid;gap:0.9rem;justify-content:center; }
+.pods-grid .pod-box{ border:2px dashed var(--ink);border-radius:14px; padding:0.6rem;background:rgba(255,255,255,0.7); }
+.pods-grid .pod-desks{ display:grid;gap:0.4rem;justify-content:center; }
+.pod-head{ font-family:'Baloo 2',sans-serif;font-weight:800;font-size:0.85rem; padding:0.2rem 0.6rem;border-radius:6px;background:var(--pcolor,var(--mint)); margin-bottom:0.6rem;display:inline-block;border:1px solid var(--ink); }
+.pods-grid .seat { width: 116px; min-height: 110px; padding: 0.3rem 0.4rem; }
+.pods-grid .seat-name { font-size: 0.78rem; }
+
+.job-brush-panel { background: var(--paper-deep); border: 2px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
+.brush-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+.brush-btn { padding: 0.45rem 0.9rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--white); font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
+.brush-btn.active { background: var(--coral); color: var(--white); border-color: var(--coral-deep); transform: translateY(-2px); }
+.brush-btn.eraser.active { background: #c9564a; color: var(--white); }
 
 .export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
 .export-btn{ border:2px solid var(--ink);border-radius:12px;padding:1.1rem;background:var(--paper); text-align:left;font-weight:700; }
@@ -124,6 +159,11 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:1100;opacity:0;pointer-events:none;transition:opacity .3s ease; text-align:center; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 .toast.toast-error{background:#c9564a;}
+
+.history-log-list{display:flex;flex-direction:column;gap:0.5rem;max-height:300px;overflow-y:auto;margin-top:0.8rem;}
+.history-log-item{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;border-radius:8px;background:var(--paper);border:1.5px solid var(--line);font-size:0.8rem;}
+.history-log-item .hl-delta.pos{color:#1d5c3a;font-weight:800;}
+.history-log-item .hl-delta.neg{color:#8A3B4D;font-weight:800;}
 </style>
 </head>
 <body>
@@ -138,7 +178,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       </div>
       <select id="yearSelect" aria-label="選擇學年度"></select>
       <button class="pill-btn small" id="newYearBtn">＋ 新增學年度</button>
-      <span class="bar-divider" id="classDivider"></span>
+      <span class="bar-divider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
       <button class="pill-btn small primary" id="firebaseModalBtn">🔥 Firebase 設定</button>
       <span class="fb-status-pill offline" id="fbStatusPill">⚪ 連線中...</span>
@@ -150,7 +190,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 <div class="modal-overlay" id="firebaseModal">
   <div class="modal-box">
     <h3>🔥 Firebase 即時雲端同步設定</h3>
-    <p>系統已預設為您的專屬 Firebase 專案，全自動跨裝置毫秒同步中！</p>
+    <p>系統已預設帶入您的專屬 Firebase 專案，全自動跨裝置毫秒同步中！</p>
     <div class="field">
       <label for="fbConfigInput">如需更換其他 Firebase 金鑰，可於下方修改：</label>
       <textarea id="fbConfigInput" placeholder="{}"></textarea>
@@ -163,7 +203,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   </div>
 </div>
 
-<!-- 自訂對話框 Prompt / Confirm -->
+<!-- 自訂對話框 Prompt Modal -->
 <div class="modal-overlay" id="customPromptModal">
   <div class="modal-box" style="max-width:420px;">
     <h3 id="customPromptTitle">請輸入</h3>
@@ -176,8 +216,20 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   </div>
 </div>
 
+<!-- 歷史紀錄 Modal -->
+<div class="modal-overlay" id="historyLogModal">
+  <div class="modal-box">
+    <h3>📜 加分歷史紀錄</h3>
+    <p>目前學生：<strong id="historyStuLabel"></strong></p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+      <button class="pill-btn small primary" id="addManualLogBtn">➕ 新增一筆加減分（含原因）</button>
+    </div>
+    <div class="history-log-list" id="historyLogList"><div class="empty-hint">尚無紀錄。</div></div>
+    <div class="modal-btns"><button class="pill-btn" id="historyLogCloseBtn">關閉</button></div>
+  </div>
+</div>
+
 <div class="wrap">
-  <!-- 首頁儀表板 -->
   <div id="dashboardView" class="dashboard-view">
     <section class="hero">
       <p class="kicker">REALTIME CLASSROOM MANAGEMENT</p>
@@ -187,7 +239,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
     <div id="dashboardClassGrid"></div>
   </div>
 
-  <!-- 設定畫面 -->
   <div id="classroomConfigView" class="classroom-config-view">
     <section class="hero" style="padding-bottom:1rem;">
       <p class="kicker" id="configYearKicker">ACADEMIC YEAR</p>
@@ -229,20 +280,51 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
     <div class="card">
       <span class="tape" style="--tape-color:var(--mint);"></span>
       <div class="step-head"><span class="step-badge num">2</span><h2>自動分組設定</h2></div>
-      <div class="stepper-row"><span class="label">每組人數</span><div class="stepper"><button data-target="groupSizeVal" data-dir="-1">－</button><span class="val" id="groupSizeVal">4</span><button data-target="groupSizeVal" data-dir="1">＋</button></div></div>
+      <div class="toggle-group" id="sizeModeToggle">
+        <button data-mode="bySize" class="active">指定每組人數</button>
+        <button data-mode="byCount">指定分組數量</button>
+      </div>
+      <div class="stepper-row"><span class="label" id="sizeStepperLabel">每組人數</span><div class="stepper"><button data-target="groupSizeVal" data-dir="-1">－</button><span class="val" id="groupSizeVal">4</span><button data-target="groupSizeVal" data-dir="1">＋</button></div></div>
+      <div class="toggle-group" id="algoToggle">
+        <button data-algo="random" class="active">隨機分組</button>
+        <button data-algo="gender">性別平衡</button>
+        <button data-algo="scoreGender">成績平均分配 (S型)</button>
+      </div>
       <button class="pill-btn primary" id="genGroupsBtn">產生分組</button>
+      <div id="groupsResult" style="margin-top:1rem;"></div>
     </div>
 
     <!-- 步驟 3: 排座位 -->
     <div class="card">
       <span class="tape" style="--tape-color:var(--butter);"></span>
-      <div class="step-head"><span class="step-badge num">3</span><h2>排座位</h2></div>
-      <div class="stepper-row">
+      <div class="step-head"><span class="step-badge num">3</span><h2>排座位與排法</h2></div>
+      <div class="toggle-group" id="seatLayoutModeToggle">
+        <button data-mode="grid" class="active">🏫 傳統矩陣行列</button>
+        <button data-mode="pods">🧩 小組島嶼桌次</button>
+      </div>
+      <div id="gridSeatControls" class="stepper-row">
         <span class="label">排數（直）</span><div class="stepper"><button data-target="rowsVal" data-dir="-1">－</button><span class="val" id="rowsVal">5</span><button data-target="rowsVal" data-dir="1">＋</button></div>
         <span class="label">行數（橫）</span><div class="stepper"><button data-target="colsVal" data-dir="-1">－</button><span class="val" id="colsVal">6</span><button data-target="colsVal" data-dir="1">＋</button></div>
       </div>
+      <div id="podSeatControls" style="display:none;background:var(--paper-deep);padding:1rem;border-radius:12px;margin-bottom:1rem;">
+        <div class="stepper-row">
+          <span class="label">島嶼欄數</span>
+          <div class="stepper"><button data-target="podColsVal" data-dir="-1">－</button><span class="val" id="podColsVal">3</span><button data-target="podColsVal" data-dir="1">＋</button></div>
+          <span class="label">內部桌次</span>
+          <select id="podDeskLayoutSelect">
+            <option value="2x2">2排 × 2行 (4人桌)</option>
+            <option value="2x3">2排 × 3行 (6人桌)</option>
+            <option value="3x2">3排 × 2行 (6人桌)</option>
+          </select>
+        </div>
+      </div>
       <button class="pill-btn primary" id="genSeatsBtn" style="margin-bottom:1rem;">將學生排入座位</button>
-      
+
+      <div class="job-brush-panel">
+        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子：</div>
+        <div class="brush-btns" id="configBrushBtns"></div>
+      </div>
+
       <div id="classroomCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
         <div class="classroom-title-banner" id="captureClassTitle">班級座位表</div>
         <div class="board-label">— 講 台 —</div>
@@ -251,7 +333,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
     </div>
   </div>
 
-  <!-- 加分面板 -->
   <div id="classroomScoreView" class="classroom-score-view">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
       <div>
@@ -263,6 +344,12 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
     <div class="card" style="margin-top:1rem;">
       <span class="tape" style="--tape-color:var(--coral);"></span>
       <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 自動毫秒同步)</h2></div>
+      
+      <div class="job-brush-panel">
+        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可套用角色）：</div>
+        <div class="brush-btns" id="scoreBrushBtns"></div>
+      </div>
+
       <div id="scoreViewCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
         <div class="classroom-title-banner" id="scoreCaptureClassTitle">班級即時加分面板</div>
         <div class="board-label">— 講 台 —</div>
@@ -285,10 +372,10 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 已嵌入您的最新 Firebase 設定金鑰
+// 已嵌入您的最新專屬 Firebase 金鑰
 const EMBEDDED_FIREBASE_CONFIG = {
   apiKey: "AIzaSyA3UFRYEoBhv_4QlU7XvyODo2o0EGBrJcc",
   authDomain: "gen-lang-client-0393721642.firebaseapp.com",
@@ -305,6 +392,9 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 window.db = { years:{}, lastYearId:null };
 window.curYear = null;
 window.cur = null;
+window.activeBrushRole = "";
+window.historyModalStuId = null;
+
 let currentView = 'dash';
 let toastTimer;
 let isUpdatingFromRemote = false;
@@ -337,26 +427,19 @@ function toast(msg, isError){
 async function initFirebase() {
   let config = EMBEDDED_FIREBASE_CONFIG;
   const saved = localStorage.getItem('user_firebase_config');
-  if (saved) {
-    try { config = JSON.parse(saved); } catch(e){}
-  }
+  if (saved) { try { config = JSON.parse(saved); } catch(e){} }
 
   try {
     fbApp = initializeApp(config);
     fbAuth = getAuth(fbApp);
     fbDb = getFirestore(fbApp);
 
-    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-      await signInWithCustomToken(fbAuth, __initial_auth_token);
-    } else {
-      await signInAnonymously(fbAuth);
-    }
-
+    await signInAnonymously(fbAuth);
     updateFbStatus(true, "🟢 Firebase 即時同步中");
     setupFirestoreListener();
   } catch(err) {
     console.error("Firebase Initialization Error:", err);
-    updateFbStatus(false, "🔴 請至 Firebase 控制台確認 Firestore 是否已啟用");
+    updateFbStatus(false, "🔴 請確認 Firestore 已於控制台開啟");
     loadLocalFallback();
   }
 }
@@ -387,9 +470,7 @@ function setupFirestoreListener() {
     }
   }, (err) => {
     console.error("Snapshot error:", err);
-    if(err.code === 'permission-denied') {
-      updateFbStatus(false, "🔴 權限不足：請將 Firestore 規則開為測試模式");
-    }
+    updateFbStatus(false, "🔴 權限不足：請確認 Firestore 規則");
   });
 }
 
@@ -409,9 +490,7 @@ async function saveDB() {
 
 function loadLocalFallback() {
   const raw = localStorage.getItem('sgh_db_v15');
-  if (raw) {
-    try { window.db = JSON.parse(raw); } catch(e){}
-  }
+  if (raw) { try { window.db = JSON.parse(raw); } catch(e){} }
   refreshActivePointers();
   renderHeaderSelects();
   if (currentView === 'dash') renderDashboard();
@@ -440,13 +519,19 @@ function refreshActivePointers(){
   if(cur){
     if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random' };
     if(!cur.studentScores) cur.studentScores = {};
-    if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6 };
+    if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6, layoutMode:'grid', podCols:3, podDeskLayout:'2x2' };
+    if(!cur.studentRoles) cur.studentRoles = {};
+    if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '小老師'];
   }
 }
 
 function allStudents(){ return cur ? [...cur.boys, ...cur.girls] : []; }
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
-function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }
+
+// Fixed escapeHtml method parenthesis syntax error
+function escapeHtml(str){ 
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); 
+}
 
 function renderDashboard(){
   const grid = document.getElementById('dashboardClassGrid');
@@ -504,7 +589,7 @@ window.dashNewClass = function(yId){
     const targetYear = db.years[yId];
     if(!targetYear) return;
     const cId = uid();
-    targetYear.classes[cId] = { name: name||'新班級', boys:[], girls:[], groupConfig:{value:4}, seatConfig:{rows:5,cols:6}, studentScores:{} };
+    targetYear.classes[cId] = { name: name||'新班級', boys:[], girls:[], groupConfig:{value:4}, seatConfig:{rows:5,cols:6,layoutMode:'grid'}, studentScores:{}, studentRoles:{} };
     db.lastYearId = yId; curYear = targetYear;
     curYear.lastClassId = cId; cur = curYear.classes[cId];
     saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
@@ -543,7 +628,7 @@ function switchView(view){
 
 function getStudentScoreObj(stuId){
   if(!cur) return {plusScore:0};
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0 };
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, scoreLog:[] };
   return cur.studentScores[stuId];
 }
 
@@ -551,20 +636,25 @@ function getBaseSeatHtml(occ, showScore = false){
   if(!occ || !findStudent(occ.id)) return `<div class="seat empty">空位</div>`;
   const s = findStudent(occ.id);
   const sc = getStudentScoreObj(s.id);
+  const roles = cur.studentRoles[s.id] || [];
   const groupColorHex = GROUP_COLORS[occ.groupId % GROUP_COLORS.length];
+
+  const roleHtml = roles.length>0 ? `<div class="role-badges-wrap">${roles.map(r=>`<span class="role-badge">${escapeHtml(r)}</span>`).join('')}</div>` : '';
 
   let controls = '';
   if(showScore){
     controls = `<div class="score-control-box">
       <span>今日加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
       <div class="score-control-btns">
+        <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
         <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
         <button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1">▼</button>
       </div>
     </div>`;
   }
 
-  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'}" style="--scolor:${groupColorHex};">
+  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'}" style="--scolor:${groupColorHex};" data-stuid="${s.id}">
+    ${roleHtml}
     <div class="seat-top-row">
       <span class="seat-name">${s.gender==='M'?'♂':'♀'} ${escapeHtml(s.name)}</span>
       <span class="seat-no">${escapeHtml(s.seatNo?'座:'+s.seatNo:'')}</span>
@@ -574,31 +664,117 @@ function getBaseSeatHtml(occ, showScore = false){
   </div>`;
 }
 
+function bindSeatBrushEvents(area, isScoreView){
+  area.querySelectorAll('.seat[data-stuid]').forEach(seatEl => {
+    seatEl.addEventListener('click', (e) => {
+      if(e.target.tagName === 'BUTTON') return;
+      const id = seatEl.dataset.stuid;
+      if(!window.activeBrushRole) return;
+      
+      if(!cur.studentRoles[id]) cur.studentRoles[id] = [];
+      if(window.activeBrushRole === 'ERASER'){
+        cur.studentRoles[id] = [];
+        toast('已清除角色');
+      } else {
+        if(cur.studentRoles[id].includes(window.activeBrushRole)){
+          cur.studentRoles[id] = cur.studentRoles[id].filter(r=>r!==window.activeBrushRole);
+        } else {
+          cur.studentRoles[id].push(window.activeBrushRole);
+        }
+        toast('已指派角色');
+      }
+      saveDB();
+      if(isScoreView) renderScoreSeats(); else renderConfigSeats();
+    });
+  });
+}
+
 function renderConfigSeats(){
   if(!cur) return;
   const area = document.getElementById('seatArea');
   if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map(o => getBaseSeatHtml(o, false)).join('')}</div>`;
+
+  if(cur.seatConfig.layoutMode === 'grid'){
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map(o => getBaseSeatHtml(o, false)).join('')}</div>`;
+  } else {
+    const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols||3}, auto);">${cur.seats.map(pod => `<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map(o => getBaseSeatHtml(o, false)).join('')}</div></div>`).join('')}</div>`;
+  }
+  bindSeatBrushEvents(area, false);
 }
 
 function renderScoreSeats(){
   if(!cur) return;
   const area = document.getElementById('scoreSeatArea');
   if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map(o => getBaseSeatHtml(o, true)).join('')}</div>`;
+
+  if(cur.seatConfig.layoutMode === 'grid'){
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map(o => getBaseSeatHtml(o, true)).join('')}</div>`;
+  } else {
+    const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols||3}, auto);">${cur.seats.map(pod => `<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map(o => getBaseSeatHtml(o, true)).join('')}</div></div>`).join('')}</div>`;
+  }
+
+  bindSeatBrushEvents(area, true);
 
   area.querySelectorAll('.score-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = btn.dataset.stuid;
-      const dir = Number(btn.dataset.dir);
       const sc = getStudentScoreObj(id);
+      
+      if(btn.classList.contains('hist-open-btn')){
+        openHistoryModal(id);
+        return;
+      }
+
+      const dir = Number(btn.dataset.dir);
       sc.plusScore += dir;
+      if(!sc.scoreLog) sc.scoreLog = [];
+      sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta: dir, reason: dir >= 0 ? '課堂加分' : '課堂扣分' });
       document.getElementById(`plus-disp-${id}`).textContent = sc.plusScore;
       saveDB();
     });
   });
 }
+
+function openHistoryModal(stuId){
+  window.historyModalStuId = stuId;
+  const s = findStudent(stuId);
+  document.getElementById('historyStuLabel').textContent = s ? s.name : '';
+  renderHistoryLog();
+  document.getElementById('historyLogModal').style.display = 'flex';
+}
+
+function renderHistoryLog(){
+  const wrap = document.getElementById('historyLogList');
+  if(!window.historyModalStuId){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  const sc = getStudentScoreObj(window.historyModalStuId);
+  const log = sc.scoreLog || [];
+  if(log.length===0){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  wrap.innerHTML = log.slice().reverse().map(entry=>{
+    const cls = entry.delta>=0 ? 'pos' : 'neg';
+    const sign = entry.delta>=0 ? ('+'+entry.delta) : entry.delta;
+    return `<div class="history-log-item"><span class="hl-delta ${cls}">${sign}</span><div><div>${escapeHtml(entry.reason||'')}</div><div style="font-size:0.7rem;color:var(--ink-soft);">${escapeHtml(entry.t||'')}</div></div></div>`;
+  }).join('');
+}
+
+document.getElementById('historyLogCloseBtn').addEventListener('click', ()=> document.getElementById('historyLogModal').style.display='none');
+
+document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
+  const stuId = window.historyModalStuId; if(!stuId) return;
+  const deltaStr = prompt('請輸入加分數值（負數代表扣分）：', '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0) return;
+  const reason = prompt('請輸入原因（選填）：', '') || '';
+  const sc = getStudentScoreObj(stuId);
+  sc.plusScore += delta;
+  if(!sc.scoreLog) sc.scoreLog = [];
+  sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason });
+  saveDB(); renderHistoryLog();
+  if(currentView==='score') renderScoreSeats();
+});
 
 function renderConfigClassroom(){
   if(!cur) return;
@@ -607,6 +783,7 @@ function renderConfigClassroom(){
   document.getElementById('classNameInput').value = cur.name;
   document.getElementById('captureClassTitle').textContent = `🏫 ${curYear.name}・${cur.name} 座位表`;
   renderRosterTables();
+  renderBrushBtns();
   renderConfigSeats();
 }
 
@@ -614,7 +791,28 @@ function renderScoreClassroom(){
   if(!cur) return;
   document.getElementById('scoreViewTitle').textContent = `🎯 ${curYear.name}・${cur.name} 即時加分面板`;
   document.getElementById('scoreCaptureClassTitle').textContent = `🎯 ${curYear.name}・${cur.name} 加分座位表`;
+  renderBrushBtns();
   renderScoreSeats();
+}
+
+function renderBrushBtns(){
+  if(!cur) return;
+  const jobs = cur.jobsList || ['組長', '工具長', '材料長', '秘書長', '小老師'];
+  const html = `<button class="brush-btn ${window.activeBrushRole===''?'active':''}" data-role="">無刷子 (取消指派)</button>` +
+    jobs.map(j => `<button class="brush-btn ${window.activeBrushRole===j?'active':''}" data-role="${escapeHtml(j)}">🏷️ ${escapeHtml(j)}</button>`).join('') +
+    `<button class="brush-btn eraser ${window.activeBrushRole==='ERASER'?'active':''}" data-role="ERASER">🧹 清除角色</button>`;
+
+  const cfgArea = document.getElementById('configBrushBtns');
+  const scoreArea = document.getElementById('scoreBrushBtns');
+  if(cfgArea) cfgArea.innerHTML = html;
+  if(scoreArea) scoreArea.innerHTML = html;
+
+  document.querySelectorAll('.brush-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.activeBrushRole = btn.dataset.role;
+      renderBrushBtns();
+    });
+  });
 }
 
 function parseRoster(text, gender){
@@ -631,7 +829,7 @@ function renderRosterTables(){
   if(!cur) return;
   const rT = (id, list) => {
     const tbody = document.querySelector(`#${id} tbody`);
-    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="3">無資料</td></tr>`;
+    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score!==null?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
     tbody.querySelectorAll('.rm').forEach(btn=> btn.addEventListener('click', ()=>{
       const idx = list.findIndex(x=>x.id===btn.closest('tr').dataset.id);
       if(idx>-1){ list.splice(idx,1); saveDB(); renderRosterTables(); }
@@ -644,6 +842,51 @@ document.getElementById('goDashboardBtn').addEventListener('click', ()=> switchV
 document.getElementById('backToDashBtn').addEventListener('click', ()=> switchView('dash'));
 document.getElementById('goToScoreModeBtn').addEventListener('click', ()=> switchView('score'));
 document.getElementById('backToConfigBtn').addEventListener('click', ()=> switchView('config'));
+
+document.getElementById('yearSelect').addEventListener('change', (e) => {
+  const yId = e.target.value;
+  if (db.years[yId]) {
+    db.lastYearId = yId;
+    curYear = db.years[yId];
+    const cIds = Object.keys(curYear.classes || {});
+    curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
+    cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
+    saveDB();
+    renderHeaderSelects();
+    if (currentView === 'config') renderConfigClassroom();
+    else if (currentView === 'score') renderScoreClassroom();
+    else renderDashboard();
+  }
+});
+
+document.getElementById('classSelect').addEventListener('change', (e) => {
+  const cId = e.target.value;
+  if (curYear && curYear.classes[cId]) {
+    curYear.lastClassId = cId;
+    cur = curYear.classes[cId];
+    saveDB();
+    renderHeaderSelects();
+    if (currentView === 'config') renderConfigClassroom();
+    else if (currentView === 'score') renderScoreClassroom();
+  }
+});
+
+document.querySelectorAll('.stepper button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const dir = Number(btn.dataset.dir);
+    const valEl = document.getElementById(targetId);
+    if (!valEl) return;
+    let v = Math.max(1, Number(valEl.textContent) + dir);
+    valEl.textContent = v;
+    if (!cur) return;
+    if (targetId === 'groupSizeVal') cur.groupConfig.value = v;
+    if (targetId === 'rowsVal') cur.seatConfig.rows = v;
+    if (targetId === 'colsVal') cur.seatConfig.cols = v;
+    if (targetId === 'podColsVal') cur.seatConfig.podCols = v;
+    saveDB();
+  });
+});
 
 document.getElementById('newYearBtn').addEventListener('click', ()=>{
   showPrompt('新增學年度', '請輸入學年度名稱：', '115學年度', (name) => {
@@ -673,13 +916,32 @@ document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
   cur.groups = groups; saveDB(); toast('自動分組完成');
 });
 
+document.getElementById('seatLayoutModeToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  cur.seatConfig.layoutMode = btn.dataset.mode;
+  document.querySelectorAll('#seatLayoutModeToggle button').forEach(b => b.classList.toggle('active', b===btn));
+  document.getElementById('gridSeatControls').style.display = cur.seatConfig.layoutMode === 'grid' ? 'flex' : 'none';
+  document.getElementById('podSeatControls').style.display = cur.seatConfig.layoutMode === 'pods' ? 'block' : 'none';
+  saveDB();
+});
+
 document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
   if(!cur || !cur.groups){ toast('請先完成自動分組', true); return; }
-  const seats = [];
-  cur.groups.forEach(g => {
-    g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
-  });
-  cur.seats = seats; saveDB(); renderConfigSeats(); toast('座位排定！');
+  
+  if(cur.seatConfig.layoutMode === 'grid'){
+    const seats = [];
+    cur.groups.forEach(g => {
+      g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
+    });
+    cur.seats = seats;
+  } else {
+    cur.seats = cur.groups.map(g => {
+      const desks = g.members.map(mId => ({ id: mId, groupId: g.id }));
+      return { podId: g.id, desks };
+    });
+  }
+  
+  saveDB(); renderConfigSeats(); toast('座位排定！');
 });
 
 document.getElementById('firebaseModalBtn').addEventListener('click', ()=>{
@@ -700,7 +962,7 @@ document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
     toast('已儲存設定，正在嘗試連線...');
     initFirebase();
   } catch(e) {
-    toast('Config 格式不正確，請確認為有效 JSON', true);
+    toast('Config 格式不正確', true);
   }
 });
 
@@ -715,10 +977,11 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    const aoa = [['座號','姓名','性別',`${dateStr} 今日加分`]];
+    const aoa = [['座號','姓名','性別','工作角色',`${dateStr} 今日加分`]];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
-      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', sc.plusScore ]);
+      const roles = (cur.studentRoles[s.id]||[]).join('、');
+      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, sc.plusScore ]);
     });
     const wb = XLSX.utils.book_new(); 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績總表');
