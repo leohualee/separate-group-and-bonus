@@ -288,15 +288,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 嵌入使用者的專屬 Firebase 設定金鑰
+// 嵌入使用者的最新 Firebase 設定金鑰
 const EMBEDDED_FIREBASE_CONFIG = {
   apiKey: "AIzaSyA3UFRYEoBhv_4QlU7XvyODo2o0EGBrJcc",
   authDomain: "gen-lang-client-0393721642.firebaseapp.com",
   projectId: "gen-lang-client-0393721642",
   storageBucket: "gen-lang-client-0393721642.firebasestorage.app",
   messagingSenderId: "825068181083",
-  appId: "1:825068181083:web:7451af66ad5cb46c5cd17e",
-  measurementId: "G-08EKCPT0VB"
+  appId: "1:825068181083:web:95998a39b6be95f95cd17e",
+  measurementId: "G-F9ZBYVQ0R2"
 };
 
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE'];
@@ -448,7 +448,7 @@ function refreshActivePointers(){
 
 function allStudents(){ return cur ? [...cur.boys, ...cur.girls] : []; }
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
-function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }
 
 function renderDashboard(){
   const grid = document.getElementById('dashboardClassGrid');
