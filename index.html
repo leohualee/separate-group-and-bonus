@@ -3,16 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統＋ Firebase & Sheets 雲端雙向版</title>
+<title>分組座位與即時計分系統 (Firebase 雲端全功能版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- Google API / GIS 用於連線 Google Sheets -->
-<script async defer src="https://apis.google.com/js/api.js" onload="window.onGapiLoad()"></script>
-<script async defer src="https://accounts.google.com/gsi/client" onload="window.onGisLoad()"></script>
 
 <style>
 :root{
@@ -45,7 +41,6 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .pill-btn:disabled{ opacity:0.5; pointer-events:none; }
 .pill-btn.primary{background:var(--coral);border-color:var(--coral-deep);color:var(--white);}
 .pill-btn.danger{background:var(--white);border-color:#c9564a;color:#c9564a;}
-.pill-btn.sheets-btn{background:#E6F4EA;border-color:#137333;color:#137333;}
 .pill-btn.small{padding:0.35rem 0.75rem;font-size:0.78rem;}
 
 .sync-status-badge{ display:inline-flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:2px solid transparent;}
@@ -54,7 +49,7 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .sync-status-badge.error{ background:#F6C9CE; color:#8A3B4D; border-color:#8A3B4D; }
 
 .modal-overlay{ position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center;z-index:1000;display:none; padding:1rem;overflow-y:auto; }
-.modal-box{ background:var(--white);border:3px solid var(--ink);border-radius:var(--radius); padding:2rem;width:100%;max-width:600px;box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh;overflow-y:auto; }
+.modal-box{ background:var(--white);border:3px solid var(--ink);border-radius:var(--radius); padding:2rem;width:100%;max-width:580px;box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh;overflow-y:auto; }
 .modal-box h3{margin-bottom:1rem;font-size:1.2rem;}
 .modal-box p{font-size:0.88rem;color:var(--ink-soft);margin-bottom:1rem;line-height:1.6;}
 .modal-btns{display:flex;gap:0.8rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap;}
@@ -70,17 +65,14 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 
 .class-overview-card { position: relative; background: var(--white); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); transition: transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
 .class-overview-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
-.class-overview-card .card-content { padding: 1.2rem; cursor: pointer; flex: 1; }
+.card-content { padding: 1.2rem; cursor: pointer; flex: 1; }
 .class-overview-card h3 { font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--ink); }
 .class-overview-card .meta { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.8rem; }
-.class-overview-card .stats { display: flex; gap: 0.6rem; font-size: 0.78rem; font-weight: 700; background: var(--paper-deep); padding: 0.4rem 0.8rem; border-radius: 8px; flex-wrap: wrap; }
 
 .card{ position:relative; background:var(--white); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.8rem clamp(1.1rem,3vw,2.2rem) 2rem; margin-top:2.6rem; }
 .tape{ position:absolute;top:-14px;left:32px; width:86px;height:26px; background:repeating-linear-gradient(45deg, var(--tape-color,var(--butter)), var(--tape-color,var(--butter)) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px); transform:rotate(-4deg); border:1px solid rgba(58,53,50,0.15); opacity:0.92; }
 .step-head{display:flex;align-items:center;gap:0.9rem;margin-bottom:1.4rem;flex-wrap:wrap;}
 .step-badge{ width:38px;height:38px;border-radius:50%; border:2px solid var(--ink); display:flex;align-items:center;justify-content:center; font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.05rem; background:var(--badge-color,var(--pink)); flex-shrink:0; }
-.step-head h2{font-size:1.25rem;}
-.step-head .desc{font-size:0.85rem;color:var(--ink-soft);width:100%;margin-top:0.2rem;}
 
 .hero{padding:2.4rem 0 1rem;}
 .hero .kicker{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;color:var(--coral-deep);}
@@ -90,7 +82,7 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 .field{margin-bottom:1.1rem;}
 .field label{display:block;font-size:0.82rem;font-weight:700;margin-bottom:0.35rem;color:var(--ink-soft);}
 textarea,.text-input{ width:100%;padding:0.7rem 0.9rem;border:2px solid var(--line);border-radius:10px; background:var(--paper);color:var(--ink);font-size:0.9rem;resize:vertical; }
-textarea{min-height:120px;}
+textarea{min-height:110px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
 
 .stepper{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:999px;overflow:hidden;}
@@ -105,47 +97,26 @@ textarea{min-height:120px;}
 .toggle-group button.active{border-color:var(--ink);background:var(--pink);color:var(--ink);}
 
 .roster-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
-.roster-block h3{font-size:0.95rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem;}
-.roster-block h3 .swatch{width:12px;height:12px;border-radius:50%;}
 table.roster{width:100%;border-collapse:collapse;font-size:0.85rem;}
-table.roster th{ text-align:left;font-size:0.72rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em; padding:0.4rem 0.5rem;border-bottom:2px solid var(--ink); }
+table.roster th{ text-align:left;font-size:0.72rem;color:var(--ink-soft);padding:0.4rem 0.5rem;border-bottom:2px solid var(--ink); }
 table.roster td{padding:0.35rem 0.5rem;border-bottom:1px dashed var(--line);}
 table.roster td[contenteditable]{outline:none;border-radius:6px;}
 table.roster td[contenteditable]:focus{background:var(--paper-deep);}
 table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-weight:900;padding:0 0.3rem; }
-.add-row-btn{margin-top:0.6rem;font-size:0.8rem;padding:0.4rem 0.9rem;}
 
-.chip-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.7rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--lilac); font-size: 0.8rem; font-weight: 700; }
-.chip button { background: none; border: none; font-weight: 900; color: var(--ink); font-size: 0.9rem; cursor: pointer; }
-
-.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;}
-.group-card{border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--paper);}
-.group-card .gh{padding:0.6rem 0.9rem;font-weight:800;font-family:'Baloo 2',sans-serif;background:var(--gcolor,var(--mint));display:flex;justify-content:space-between;align-items:center;}
-.group-card ul{list-style:none;margin:0;padding:0.5rem 0.4rem;}
-.group-card li{ display:flex;align-items:center;justify-content:space-between; padding:0.4rem 0.6rem;border-radius:8px;font-size:0.85rem; }
-.group-card li:hover{background:var(--paper-deep);}
-.group-card li .meta{color:var(--ink-soft);font-size:0.74rem;}
-.group-card select.move-sel{font-size:0.72rem;padding:0.15rem 0.3rem;border-radius:6px;}
-
-.classroom-title-banner{ text-align:center;font-size:1.1rem;font-weight:900;color:var(--ink); margin-bottom:0.8rem;letter-spacing:0.05em; }
+.classroom-title-banner{ text-align:center;font-size:1.1rem;font-weight:900;color:var(--ink); margin-bottom:0.8rem; }
 .board-label{ text-align:center;font-size:0.85rem;font-weight:900;color:var(--ink); background:var(--butter);border:2px solid var(--ink);border-radius:8px; padding:0.5rem 1rem;margin:0 auto 1.2rem;max-width:300px;letter-spacing:0.2em; }
 .seat-grid-container{ overflow-x:auto;padding:1rem 0.5rem; }
 .seat-grid{display:grid;gap:0.7rem;justify-content:center;}
 
-.seat{ width:148px;min-height:138px;border-radius:12px;border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem;font-size:0.75rem; display:flex;flex-direction:column;justify-content:space-between; user-select:none;transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow: hidden; }
-.seat.draggable { cursor: grab; }
-.seat.draggable:active { cursor: grabbing; }
+.seat{ width:148px;min-height:138px;border-radius:12px;border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem;font-size:0.75rem; display:flex;flex-direction:column;justify-content:space-between; user-select:none;transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow: hidden; cursor:grab; }
+.seat:active{ cursor:grabbing; }
 .seat:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
 .seat.gender-m { background: #25374C; color: #FFFFFF; border: 2px solid #142232; }
-.seat.gender-m .no { color: rgba(255,255,255,0.75); }
 .seat.gender-m .group-tag { background: rgba(0,0,0,0.4); color: #F5DDA0; }
-.seat.gender-m.has-role { background: #192736; border: 2px solid #F5DDA0; box-shadow: 0 0 0 2px #F5DDA0; }
 .seat.gender-m select, .seat.gender-m button.score-btn { background: #142232; color: #fff; border: 1px solid rgba(255,255,255,0.3); }
 .seat.gender-f { background: #FFF0F3; color: var(--ink); border: 2px solid #E295A8; }
-.seat.gender-f .no { color: var(--ink-soft); }
 .seat.gender-f .group-tag { background: rgba(226,149,168,0.25); color: #8A3B4D; }
-.seat.gender-f.has-role { background: #FFE2E7; border: 2px solid #D97A62; box-shadow: 0 0 0 2px #D97A62; }
 .seat.gender-f select, .seat.gender-f button.score-btn { background: #fff; color: var(--ink); border: 1px solid #E295A8; }
 .seat .group-tag { font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block; white-space: nowrap; width: fit-content; }
 .seat .role-badges-wrap { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 90%; pointer-events: none; }
@@ -153,240 +124,201 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .seat-top-row { display:flex; justify-content:space-between; align-items:center; width:100%; gap: 4px; overflow: hidden; margin-bottom: 2px; }
 .seat-name { font-weight:800; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex: 1; text-align: left; }
 .seat-no { font-size:0.65rem; white-space: nowrap; flex-shrink: 0; }
-.seat-score-row { display: flex; align-items: center; justify-content: space-between; gap: 2px; margin-top: 2px; }
-.seat-score-row select { padding: 1px; font-size: 0.7rem; border-radius: 4px; width: 48px; }
 .score-control-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.08); border-radius: 6px; padding: 2px 4px; font-size: 0.72rem; margin-top: 2px; }
 .score-control-btns { display: flex; gap: 1px; }
 .score-btn { width: 20px; height: 20px; font-size: 0.7rem; font-weight: bold; border-radius: 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; }
-.gender-legend { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; font-size: 0.82rem; font-weight: 700; background: var(--paper-deep); padding: 0.6rem 1rem; border-radius: 10px; border: 1.5px solid var(--line); width: fit-content; flex-wrap: wrap; }
-.legend-box { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
-.legend-box.m { background: #25374C; border: 1px solid #142232; }
-.legend-box.f { background: #FFF0F3; border: 1px solid #E295A8; }
 .seat.empty{ background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
-.seat.drag-over{transform:scale(1.05);outline:3px dashed var(--coral-deep);z-index:10;}
+.seat.drag-over{ transform:scale(1.05); outline:3px dashed var(--coral-deep); z-index:10; }
 
 .job-brush-panel { background: var(--paper-deep); border: 2px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
 .brush-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
 .brush-btn { padding: 0.45rem 0.9rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--white); font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
-.brush-btn.active { background: var(--coral); color: var(--white); border-color: var(--coral-deep); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(217,122,98,0.3); }
-.brush-btn.eraser { background: var(--white); border-color: #c9564a; color: #c9564a; }
+.brush-btn.active { background: var(--coral); color: var(--white); border-color: var(--coral-deep); transform: translateY(-2px); }
 .brush-btn.eraser.active { background: #c9564a; color: var(--white); }
 
 .export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
 .export-btn{ border:2px solid var(--ink);border-radius:12px;padding:1.1rem;background:var(--paper); text-align:left;font-weight:700; }
-.export-btn .ic{font-size:1.5rem;}
-.export-btn .t{margin-top:0.5rem;}
-.export-btn .s{font-size:0.75rem;color:var(--ink-soft);font-weight:400;margin-top:0.2rem;}
 .export-btn:hover{background:var(--butter);}
 
 .empty-hint{font-size:0.85rem;color:var(--ink-soft);padding:1rem;border:2px dashed var(--line);border-radius:10px;text-align:center;}
-.toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s ease, transform .3s ease; max-width:90vw;text-align:center; }
+.toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:1100;opacity:0;pointer-events:none;transition:opacity .3s ease; text-align:center; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 .toast.toast-error{background:#c9564a;}
+
+.history-log-list{display:flex;flex-direction:column;gap:0.5rem;max-height:300px;overflow-y:auto;margin-top:0.8rem;}
+.history-log-item{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;border-radius:8px;background:var(--paper);border:1.5px solid var(--line);font-size:0.8rem;}
+.history-log-item .hl-delta.pos{color:#1d5c3a;font-weight:800;}
+.history-log-item .hl-delta.neg{color:#8A3B4D;font-weight:800;}
 </style>
 </head>
 <body>
+
 <header class="top">
   <div class="top-inner">
     <div class="brand" id="goDashboardBtn"><span class="dot"></span>分組座位與即時計分系統</div>
     <div class="class-bar">
       <div id="classroomHeaderTools" style="display:none; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-        <button class="pill-btn small" id="backToDashBtn">🏠 回首頁</button>
+        <button class="pill-btn small" id="backToDashBtn">🏠 回首頁總覽</button>
         <span class="bar-divider"></span>
       </div>
       <select id="yearSelect" aria-label="選擇學年度"></select>
       <button class="pill-btn small" id="newYearBtn">＋ 新增學年度</button>
-      <span class="bar-divider" id="classDivider"></span>
+      <span class="bar-divider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
-      
-      <!-- 雲端試算表連結按鈕 -->
-      <button class="pill-btn small sheets-btn" id="openSheetsModalBtn">📊 雲端試算表 (Google Sheets)</button>
-
-      <!-- Firebase 即時同步狀態 -->
-      <span class="sync-status-badge syncing" id="firebaseStatusBadge">🟡 正在連線 Firebase...</span>
+      <button class="pill-btn small primary" id="firebaseModalBtn">🔥 Firebase 設定</button>
+      <span class="sync-status-badge syncing" id="firebaseStatusBadge">🟡 正在連線...</span>
     </div>
   </div>
 </header>
 
-<!-- Google Sheets 同步管理對話框 -->
-<div class="modal-overlay" id="sheetsModal">
+<div class="modal-overlay" id="firebaseModal">
   <div class="modal-box">
-    <h3>📊 Google 雲端試算表連線管理</h3>
-    <p>目前班級：<strong id="modalCurClassLabel">三年一班</strong></p>
-    <div style="background:var(--mint);padding:1rem;border-radius:12px;margin-bottom:1.2rem;border:2px solid var(--ink);">
-      <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">🌐 班級專屬工作表 (Google Sheets)</div>
-      <p style="font-size:0.82rem;margin-bottom:0.6rem;">連線後會在 Google 雲端硬碟建立「SGH整合計分系統_雲端總表」，並依班級自動建立獨立分頁，方便您隨時在雲端用 Excel 查看最新成績。</p>
-      <div id="sheetsLinkStatusText" style="font-size:0.82rem;margin-bottom:0.8rem;color:var(--ink-soft);">尚未連結試算表</div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-        <button class="pill-btn primary small" id="authAndLinkSheetBtn">🔗 授權並建立／連結雲端試算表</button>
-        <button class="pill-btn small" id="pushToSheetBtn">⬆️ 手動推送最新成績</button>
-      </div>
+    <h3>🔥 Firebase 即時雲端同步設定</h3>
+    <p>系統已自動載入您的 Firebase 專案，跨裝置毫秒同步中！</p>
+    <div class="field">
+      <label for="fbConfigInput">自訂 Firebase Config (JSON)：</label>
+      <textarea id="fbConfigInput" placeholder="{}"></textarea>
     </div>
-    <div class="modal-btns">
-      <button class="pill-btn" id="closeSheetsModalBtn">關閉</button>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <button class="pill-btn primary" id="saveFbConfigBtn">💾 儲存並連線</button>
+      <button class="pill-btn danger" id="clearFbConfigBtn">恢復預設專案</button>
     </div>
+    <div class="modal-btns"><button class="pill-btn" id="closeFbModalBtn">關閉</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyLogModal">
+  <div class="modal-box">
+    <h3>📜 加分歷史紀錄</h3>
+    <p>目前學生：<strong id="historyStuLabel"></strong></p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+      <button class="pill-btn small primary" id="addManualLogBtn">➕ 新增一筆加減分（含原因）</button>
+    </div>
+    <div class="history-log-list" id="historyLogList"><div class="empty-hint">尚無紀錄。</div></div>
+    <div class="modal-btns"><button class="pill-btn" id="historyLogCloseBtn">關閉</button></div>
   </div>
 </div>
 
 <div class="wrap">
-  <!-- 1. 首頁總覽視圖 -->
   <div id="dashboardView" class="dashboard-view">
     <section class="hero">
-      <p class="kicker">REALTIME & SHEETS INTEGRATION</p>
+      <p class="kicker">REALTIME CLASSROOM MANAGEMENT</p>
       <h1>所有班級座位表與即時計分</h1>
-      <p>🔥 系統已由 <b>Firebase 毫秒即時同步</b>，點擊加分即刻儲存；同時支援 <b>Google Sheets 雲端連線</b>，隨時在雲端查看 Excel！</p>
+      <p>🔥 已連結 Firebase 雲端資料庫！任何裝置點擊加分或修改座位，全自動雙向毫秒同步！</p>
     </section>
     <div id="dashboardClassGrid"></div>
   </div>
 
-  <!-- 2. 班級分組與座位設定視圖 -->
   <div id="classroomConfigView" class="classroom-config-view">
     <section class="hero" style="padding-bottom:1rem;">
       <p class="kicker" id="configYearKicker">ACADEMIC YEAR</p>
       <h1 id="configClassNameTitle">班級分組與座位設定</h1>
-      <p>在此設定名單、執行分組與排定座位。完成後可點下方按鈕進入加分面板！</p>
     </section>
-    <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <div style="margin-bottom:1.5rem;">
       <button class="pill-btn primary" id="goToScoreModeBtn" style="font-size:1rem; padding:0.7rem 1.4rem;">🎯 進入即時加分與計分面板 ➔</button>
     </div>
 
-    <!-- 步驟 1: 名單 -->
     <div class="card">
       <span class="tape" style="--tape-color:var(--pink);"></span>
-      <div class="step-head">
-        <span class="step-badge num" style="--badge-color:var(--pink);">1</span>
-        <h2>學生名單與資料</h2>
-      </div>
-      <div class="field" style="max-width:320px;margin-bottom:1.4rem;">
-        <label for="classNameInput">班級名稱</label>
-        <input type="text" id="classNameInput" class="text-input" placeholder="例如：三年二班">
-      </div>
+      <div class="step-head"><span class="step-badge num">1</span><h2>學生名單與資料</h2></div>
+      <div class="field" style="max-width:320px;"><label for="classNameInput">班級名稱</label><input type="text" id="classNameInput" class="text-input"></div>
       <div class="grid-2">
         <div class="field"><label for="boysInput">男生資料 (座號 姓名 分數)</label><textarea id="boysInput" placeholder="01,王小明,85"></textarea></div>
         <div class="field"><label for="girlsInput">女生資料 (座號 姓名 分數)</label><textarea id="girlsInput" placeholder="01,陳小美,90"></textarea></div>
       </div>
-      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
-        <button class="pill-btn primary" id="loadRosterBtn">載入到名單表格</button>
-        <span style="color:var(--ink-soft);font-size:0.82rem;">或</span>
-        <button class="pill-btn small" id="importFileBtn">📂 匯入 Excel／CSV</button>
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+        <button class="pill-btn primary" id="loadRosterBtn">載入名單</button>
+        <button class="pill-btn small" id="importFileBtn">📂 匯入 Excel/CSV</button>
         <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
       </div>
       <div class="roster-cols" style="margin-top:1.6rem;">
         <div class="roster-block">
-          <h3><span class="swatch" style="background:var(--sky);"></span>男生名單</h3>
+          <h3>男生名單</h3>
           <table class="roster" id="boysTable"><thead><tr><th>座號</th><th>姓名</th><th>分數</th><th></th></tr></thead><tbody></tbody></table>
-          <button class="pill-btn small add-row-btn" data-gender="M">＋ 新增一位</button>
         </div>
         <div class="roster-block">
-          <h3><span class="swatch" style="background:var(--pink);"></span>女生名單</h3>
+          <h3>女生名單</h3>
           <table class="roster" id="girlsTable"><thead><tr><th>座號</th><th>姓名</th><th>分數</th><th></th></tr></thead><tbody></tbody></table>
-          <button class="pill-btn small add-row-btn" data-gender="F">＋ 新增一位</button>
         </div>
       </div>
     </div>
 
-    <!-- 步驟 2: 分組 -->
     <div class="card">
       <span class="tape" style="--tape-color:var(--mint);"></span>
-      <div class="step-head">
-        <span class="step-badge num" style="--badge-color:var(--mint);">2</span>
-        <h2>分組設定</h2>
-      </div>
-      <div class="stepper-row">
-        <span class="label">每組人數</span>
-        <div class="stepper"><button id="decGroupSizeBtn">－</button><span class="val" id="groupSizeVal">4</span><button id="incGroupSizeBtn">＋</button></div>
-      </div>
+      <div class="step-head"><span class="step-badge num">2</span><h2>自動分組設定</h2></div>
+      <div class="stepper-row"><span class="label">每組人數</span><div class="stepper"><button id="decGroupSizeBtn">－</button><span class="val" id="groupSizeVal">4</span><button id="incGroupSizeBtn">＋</button></div></div>
       <div class="toggle-group" id="algoToggle">
         <button data-algo="random" class="active">隨機分組</button>
         <button data-algo="gender">性別平衡</button>
         <button data-algo="scoreGender">成績平均分配 (S型)</button>
       </div>
-      <button class="pill-btn primary" id="genGroupsBtn" style="margin-top:0.8rem;">產生分組</button>
+      <button class="pill-btn primary" id="genGroupsBtn">產生分組</button>
+      <div id="groupsResult" style="margin-top:1rem;"></div>
     </div>
 
-    <!-- 步驟 3: 分組結果 -->
-    <div class="card">
-      <span class="tape" style="--tape-color:var(--sky);"></span>
-      <div class="step-head">
-        <span class="step-badge num" style="--badge-color:var(--sky);">3</span>
-        <h2>分組結果</h2>
-      </div>
-      <div id="groupsResult"><div class="empty-hint">尚未產生分組。</div></div>
-    </div>
-
-    <!-- 步驟 4: 座位安排 -->
     <div class="card">
       <span class="tape" style="--tape-color:var(--butter);"></span>
-      <div class="step-head">
-        <span class="step-badge num" style="--badge-color:var(--butter);">4</span>
-        <h2>排座位與工作指派</h2>
-        <p class="desc">選定排數行數後點擊排入，排好後可直接拖曳互換座位！</p>
-      </div>
+      <div class="step-head"><span class="step-badge num">3</span><h2>排座位與排法</h2></div>
       <div class="stepper-row">
-        <span class="label">排數（直）</span>
-        <div class="stepper"><button id="decRowsBtn">－</button><span class="val" id="rowsVal">5</span><button id="incRowsBtn">＋</button></div>
-        <span class="label">行數（橫）</span>
-        <div class="stepper"><button id="decColsBtn">－</button><span class="val" id="colsVal">6</span><button id="incColsBtn">＋</button></div>
+        <span class="label">排數（直）</span><div class="stepper"><button id="decRowsBtn">－</button><span class="val" id="rowsVal">5</span><button id="incRowsBtn">＋</button></div>
+        <span class="label">行數（橫）</span><div class="stepper"><button id="decColsBtn">－</button><span class="val" id="colsVal">6</span><button id="incColsBtn">＋</button></div>
       </div>
-      <div style="margin-bottom:1.4rem;">
-        <button class="pill-btn primary" id="genSeatsBtn">將學生排入座位</button>
-      </div>
+      <button class="pill-btn primary" id="genSeatsBtn" style="margin-bottom:1rem;">將學生排入座位</button>
+
       <div class="job-brush-panel">
-        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（點選學生即可指派）：</div>
+        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
       </div>
-      <div class="gender-legend">
-        <span>座次圖例：</span>
-        <span><span class="legend-box m"></span>♂ 男生（深色）</span>
-        <span><span class="legend-box f"></span>♀ 女生（淺色）</span>
-      </div>
+
       <div id="classroomCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
         <div class="classroom-title-banner" id="captureClassTitle">班級座位表</div>
         <div class="board-label">— 講 台 —</div>
-        <div class="seat-grid-container" id="seatArea"><div class="empty-hint">尚未排入座位。</div></div>
+        <div class="seat-grid-container" id="seatArea"></div>
       </div>
     </div>
   </div>
 
-  <!-- 3. 即時加分面板視圖 -->
   <div id="classroomScoreView" class="classroom-score-view">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
       <div>
-        <button class="pill-btn" id="backToConfigBtn">⬅️ 返回設定</button>
+        <button class="pill-btn" id="backToConfigBtn">⬅️ 返回分組與座位設定</button>
         <h2 id="scoreViewTitle" style="margin-top:0.6rem; font-size:1.8rem;">即時加分與計分面板</h2>
-      </div>
-      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
-        <button class="pill-btn sheets-btn" id="quickSyncSheetBtn" style="font-size:0.95rem; padding:0.6rem 1.2rem;">📊 同步至雲端試算表</button>
       </div>
     </div>
 
     <div class="card" style="margin-top:1rem;">
       <span class="tape" style="--tape-color:var(--coral);"></span>
-      <div class="step-head">
-        <span class="step-badge num" style="--badge-color:var(--coral);">★</span>
-        <h2>座位即時加分</h2>
-        <p class="desc">點擊 ▲ / ▼ 調整今日加分，數值會自動透過 Firebase 毫秒同步！</p>
+      <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 自動毫秒同步)</h2></div>
+      
+      <div class="job-brush-panel">
+        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子：</div>
+        <div class="brush-btns" id="scoreBrushBtns"></div>
       </div>
-      <div id="scoreSeatArea" class="seat-grid-container"><div class="empty-hint">尚未排入座位。</div></div>
+
+      <div id="scoreViewCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
+        <div class="classroom-title-banner" id="scoreCaptureClassTitle">班級即時加分面板</div>
+        <div class="board-label">— 講 台 —</div>
+        <div class="seat-grid-container" id="scoreSeatArea"></div>
+      </div>
     </div>
 
     <div class="card">
       <span class="tape" style="--tape-color:var(--peach);"></span>
-      <div class="step-head"><span class="step-badge num" style="--badge-color:var(--peach);">📊</span><h2>匯出成果</h2></div>
+      <div class="step-head"><span class="step-badge num">📊</span><h2>匯出成果</h2></div>
       <div class="export-grid">
-        <button class="export-btn" id="exportXlsxBtn"><div class="ic">📊</div><div class="t">下載成績 Excel</div><div class="s">產出離線 .xlsx 報表檔</div></button>
-        <button class="export-btn" id="exportJpgBtn"><div class="ic">🖼️</div><div class="t">下載座位圖 JPG</div><div class="s">儲存完整加分座位排版</div></button>
+        <button class="export-btn" id="exportJpgBtn"><div>🖼️ 下載畫面 JPG</div><div style="font-size:0.75rem;color:var(--ink-soft);">儲存當前座位圖</div></button>
+        <button class="export-btn" id="exportXlsxBtn"><div>📊 下載成績 Excel (.xlsx)</div><div style="font-size:0.75rem;color:var(--ink-soft);">匯出含今日加分與總分報表</div></button>
       </div>
     </div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 
-<!-- 系統核心邏輯模組 (Firebase v10 CDN + Google Sheets API) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyA3UFRYEoBhv_4QlU7XvyODo2o0EGBrJcc",
@@ -398,577 +330,613 @@ const DEFAULT_FIREBASE_CONFIG = {
   measurementId: "G-F9ZBYVQ0R2"
 };
 
-const GOOGLE_CLIENT_ID = '110174141263-lhts0dc7p4ihckofh3q7kn4d0e7fo5n9.apps.googleusercontent.com';
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
-const uid = ()=> Math.random().toString(36).slice(2,9);
-
-let app, auth, dbInstance, unsubSnapshot = null;
-let googleTokenClient = null;
-let googleAccessToken = null;
-let isApplyingRemote = false;
+const uid = () => Math.random().toString(36).slice(2, 9);
 
 window.db = { years:{}, lastYearId:null };
 window.curYear = null;
 window.cur = null;
 window.activeBrushRole = "";
+window.historyModalStuId = null;
+
 let currentView = 'dash';
 let toastTimer;
+let isUpdatingFromRemote = false;
+let fbApp = null, fbAuth = null, fbDb = null, unsubscribeSnapshot = null;
 
-function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function toast(msg, isError){
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+function toast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   t.classList.toggle('toast-error', !!isError);
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
-function updateSyncStatus(status, text){
+function updateSyncStatus(status, text) {
   const badge = document.getElementById('firebaseStatusBadge');
   if(!badge) return;
   badge.className = `sync-status-badge ${status}`;
   badge.textContent = text;
 }
 
-// 1. 初始化 Firebase 即時同步
-async function initFirebase(){
-  try{
-    updateSyncStatus('syncing', '🟡 正在連線 Firebase...');
-    app = initializeApp(DEFAULT_FIREBASE_CONFIG);
-    auth = getAuth(app);
-    dbInstance = getFirestore(app);
+async function initFirebase() {
+  let config = DEFAULT_FIREBASE_CONFIG;
+  const saved = localStorage.getItem('user_firebase_config');
+  if (saved) { try { config = JSON.parse(saved); } catch(e){} }
 
-    onAuthStateChanged(auth, async user => {
-      if(user){
-        listenToFirestore();
+  try {
+    updateSyncStatus('syncing', '🟡 正在連線...');
+    fbApp = initializeApp(config);
+    fbAuth = getAuth(fbApp);
+    fbDb = getFirestore(fbApp);
+
+    onAuthStateChanged(fbAuth, async (user) => {
+      if (user) {
+        setupFirestoreListener();
       } else {
-        await signInAnonymously(auth);
+        try {
+          await signInAnonymously(fbAuth);
+        } catch (authErr) {
+          console.warn("Firebase Anonymous auth failed:", authErr);
+          updateSyncStatus('error', '🔴 請啟用匿名驗證');
+        }
       }
     });
-  }catch(e){
-    console.error(e);
+  } catch(err) {
+    console.error("Firebase Init Error:", err);
     updateSyncStatus('error', '🔴 連線失敗');
+    loadLocalFallback();
   }
 }
 
-function listenToFirestore(){
-  const docRef = doc(dbInstance, "classroom_system", "master_data");
-  if(unsubSnapshot) unsubSnapshot();
-  unsubSnapshot = onSnapshot(docRef, docSnap => {
-    if(docSnap.exists()){
-      const remoteData = docSnap.data();
-      if(remoteData && remoteData.years){
-        isApplyingRemote = true;
-        window.db = remoteData;
-        restoreSelections();
-        renderHeaderSelects();
-        if(currentView === 'dash') renderDashboard();
-        else if(currentView === 'config') renderConfigClassroom();
-        else if(currentView === 'score') renderScoreClassroom();
-        isApplyingRemote = false;
-        updateSyncStatus('connected', '🟢 Firebase 即時同步中');
-      }
+function setupFirestoreListener() {
+  if (!fbDb || !fbAuth?.currentUser) return;
+  const docRef = doc(fbDb, 'classroom_system', 'master_data');
+  
+  if (unsubscribeSnapshot) unsubscribeSnapshot();
+
+  unsubscribeSnapshot = onSnapshot(docRef, (snapshot) => {
+    if (snapshot.exists()) {
+      isUpdatingFromRemote = true;
+      window.db = snapshot.data() || { years:{} };
+      refreshActivePointers();
+      renderHeaderSelects();
+      if (currentView === 'dash') renderDashboard();
+      else if (currentView === 'config') renderConfigClassroom();
+      else if (currentView === 'score') renderScoreClassroom();
+      isUpdatingFromRemote = false;
+      updateSyncStatus('connected', '🟢 Firebase 即時同步中');
     } else {
-      syncToFirestore(true);
-      updateSyncStatus('connected', '🟢 Firebase 初始建立完成');
+      saveDB();
+      updateSyncStatus('connected', '🟢 Firebase 已建立初始檔');
     }
-  }, err=>{
-    console.error(err);
+  }, (err) => {
+    console.error("Snapshot error:", err);
     updateSyncStatus('error', '🔴 同步中斷');
   });
 }
 
-async function syncToFirestore(immediate){
-  if(isApplyingRemote || !dbInstance) return;
-  try{
-    const docRef = doc(dbInstance, "classroom_system", "master_data");
-    await setDoc(docRef, JSON.parse(JSON.stringify(window.db)));
-  }catch(e){
-    console.error('Firestore 儲存失敗', e);
+async function saveDB() {
+  localStorage.setItem('sgh_db_v16', JSON.stringify(window.db));
+  if (isUpdatingFromRemote) return;
+
+  if (fbDb && fbAuth?.currentUser) {
+    try {
+      const docRef = doc(fbDb, 'classroom_system', 'master_data');
+      await setDoc(docRef, JSON.parse(JSON.stringify(window.db)));
+    } catch(err) {
+      console.error("Cloud save failed:", err);
+    }
   }
 }
 
-function restoreSelections(){
-  if(window.db.lastYearId && window.db.years[window.db.lastYearId]){
-    window.curYear = window.db.years[window.db.lastYearId];
+function loadLocalFallback() {
+  const raw = localStorage.getItem('sgh_db_v16');
+  if (raw) { try { window.db = JSON.parse(raw); } catch(e){} }
+  refreshActivePointers();
+  renderHeaderSelects();
+  if (currentView === 'dash') renderDashboard();
+}
+
+function refreshActivePointers(){
+  if(!db.years) db.years = {};
+  if(db.lastYearId && db.years[db.lastYearId]){
+    curYear = db.years[db.lastYearId];
   } else {
-    const yIds = Object.keys(window.db.years || {});
-    window.curYear = yIds.length>0 ? window.db.years[yIds[0]] : null;
-    window.db.lastYearId = window.curYear ? window.curYear.id : null;
+    const yIds = Object.keys(db.years);
+    curYear = yIds.length > 0 ? db.years[yIds[0]] : null;
+    db.lastYearId = curYear ? curYear.id : null;
   }
-  if(window.curYear){
-    if(window.curYear.lastClassId && window.curYear.classes[window.curYear.lastClassId]){
-      window.cur = window.curYear.classes[window.curYear.lastClassId];
+
+  if(curYear){
+    if(curYear.lastClassId && curYear.classes[curYear.lastClassId]){
+      cur = curYear.classes[curYear.lastClassId];
     } else {
-      const cIds = Object.keys(window.curYear.classes || {});
-      window.cur = cIds.length>0 ? window.curYear.classes[cIds[0]] : null;
-      window.curYear.lastClassId = window.cur ? cIds[0] : null;
+      const cIds = Object.keys(curYear.classes || {});
+      cur = cIds.length > 0 ? curYear.classes[cIds[0]] : null;
+      curYear.lastClassId = cur ? cIds[0] : null;
     }
-  } else {
-    window.cur = null;
+  } else cur = null;
+
+  if(cur){
+    if(!cur.groupConfig) cur.groupConfig = { value:4, algo:'random' };
+    if(!cur.studentScores) cur.studentScores = {};
+    if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6 };
+    if(!cur.studentRoles) cur.studentRoles = {};
+    if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '小老師'];
   }
 }
 
-function blankClass(name){
-  return {
-    name, boys:[], girls:[],
-    groupConfig:{ value:4, algo:'random' }, groups:null,
-    seatConfig:{ rows:5, cols:6 }, seats:null,
-    studentRoles:{}, studentScores:{},
-    jobsList:['組長', '工具長', '材料長', '秘書長', '環境長', '小老師'],
-    sheetId:null, sheetUrl:null
-  };
-}
-
-function blankYear(name){
-  const yid = uid();
-  return { id:yid, name, classes:{}, lastClassId:null };
-}
-
-function allStudents(){ return window.cur ? [...window.cur.boys, ...window.cur.girls] : []; }
+function allStudents(){ return cur ? [...(cur.boys||[]), ...(cur.girls||[])] : []; }
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
+
 function getStudentScoreObj(stuId){
-  if(!window.cur) return {plusScore:0};
-  if(!window.cur.studentScores[stuId]) window.cur.studentScores[stuId] = { plusScore: 0, projectGrade: '作品', projectModifier: '無' };
-  return window.cur.studentScores[stuId];
-}
-
-// 2. Google Sheets API 雲端試算表連線模組
-window.onGapiLoad = function(){
-  if(window.gapi) gapi.load('client', ()=>{});
-};
-
-window.onGisLoad = function(){
-  if(window.google && google.accounts && google.accounts.oauth2){
-    googleTokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
-      callback: (resp)=>{
-        if(resp.error) { toast('Google 授權失敗', true); return; }
-        googleAccessToken = resp.access_token;
-        linkGoogleSheetProcess();
-      }
-    });
-  }
-};
-
-function requestGoogleAuth(){
-  if(googleAccessToken){
-    linkGoogleSheetProcess();
-  } else if(googleTokenClient){
-    googleTokenClient.requestAccessToken({prompt: 'consent'});
-  } else {
-    toast('Google 登入模組載入中，請稍候重試', true);
-  }
-}
-
-async function linkGoogleSheetProcess(){
-  if(!window.cur){ toast('請先選擇班級'); return; }
-  toast('正在建立／連結雲端試算表...');
-  try{
-    const spreadsheetTitle = `SGH整合計分系統_雲端總表`;
-    const tabName = `${window.curYear.name}-${window.cur.name}`;
-    let sheetId = window.cur.sheetId;
-
-    if(!sheetId){
-      const q = encodeURIComponent(`name='${spreadsheetTitle}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
-      const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: new Headers({ 'Authorization': 'Bearer ' + googleAccessToken }) });
-      const searchData = await searchRes.json();
-      if(searchData.files && searchData.files.length > 0){
-        sheetId = searchData.files[0].id;
-      } else {
-        const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-          method: 'POST',
-          headers: new Headers({ 'Authorization': 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ properties: { title: spreadsheetTitle }, sheets: [{ properties: { title: tabName } }] })
-        });
-        const createData = await createRes.json();
-        sheetId = createData.spreadsheetId;
-      }
-    }
-
-    // 檢查是否有當前班級分頁，沒有則新增
-    const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`, { headers: new Headers({ 'Authorization': 'Bearer ' + googleAccessToken }) });
-    const metaData = await metaRes.json();
-    const sheetExists = metaData.sheets.some(s => s.properties.title === tabName);
-
-    if(!sheetExists){
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
-        method: 'POST',
-        headers: new Headers({ 'Authorization': 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tabName } } }] })
-      });
-    }
-
-    window.cur.sheetId = sheetId;
-    window.cur.sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-    await syncToFirestore();
-    renderSheetsModalStatus();
-    await pushScoresToGoogleSheet(true);
-    toast(`已成功連線雲端工作表：${tabName}`);
-  }catch(e){
-    toast('連線失敗：' + e.message, true);
-  }
-}
-
-async function pushScoresToGoogleSheet(silent){
-  if(!window.cur || !window.cur.sheetId){
-    if(!silent) toast('請先授權連線試算表');
-    return;
-  }
-  if(!googleAccessToken){
-    requestGoogleAuth();
-    return;
-  }
-  try{
-    const tabName = `${window.curYear.name}-${window.cur.name}`;
-    const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
-    const header = ['座號','姓名','性別','工作角色','原始分數',`${dateStr} 今日加分`,`${dateStr} 作品評級`,'累計總分','最後更新時間'];
-    
-    const rows = [header];
-    allStudents().forEach(s=>{
-      const sc = getStudentScoreObj(s.id);
-      const roles = (window.cur.studentRoles[s.id] || []).join('、');
-      const baseScore = Number(s.score) || 0;
-      const totalScore = baseScore + (sc.plusScore || 0);
-      rows.push([
-        s.seatNo || '', s.name, s.gender==='M'?'男':'女', roles, s.score || '',
-        sc.plusScore || 0, `${sc.projectGrade || '作品'}${sc.projectModifier==='無'?'':sc.projectModifier}`,
-        totalScore, new Date().toLocaleTimeString('zh-TW')
-      ]);
-    });
-
-    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${window.cur.sheetId}/values/'${encodeURIComponent(tabName)}'!A1?valueInputOption=RAW`, {
-      method: 'PUT',
-      headers: new Headers({ 'Authorization': 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ values: rows })
-    });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    if(!silent) toast('已成功將最新成績推送到雲端試算表！');
-  }catch(e){
-    if(!silent) toast('推送失敗：' + e.message, true);
-  }
-}
-
-function renderSheetsModalStatus(){
-  const statusEl = document.getElementById('sheetsLinkStatusText');
-  const labelEl = document.getElementById('modalCurClassLabel');
-  if(!window.cur){
-    labelEl.textContent = '未選擇班級';
-    statusEl.textContent = '請先建立或選擇班級。';
-    return;
-  }
-  labelEl.textContent = `${window.curYear.name}・${window.cur.name}`;
-  if(window.cur.sheetId){
-    statusEl.innerHTML = `已連結試算表！<br><a href="${window.cur.sheetUrl}" target="_blank" style="color:#137333;font-weight:bold;">點此開啟雲端 Google Sheets ↗</a>`;
-  } else {
-    statusEl.textContent = '尚未連結試算表，點擊下方按鈕即可建立。';
-  }
-}
-
-// 畫面切換與介面渲染邏輯
-function switchView(view){
-  currentView = view;
-  document.getElementById('dashboardView').style.display = (view==='dash')?'block':'none';
-  document.getElementById('classroomConfigView').style.display = (view==='config')?'block':'none';
-  document.getElementById('classroomScoreView').style.display = (view==='score')?'block':'none';
-  document.getElementById('classroomHeaderTools').style.display = (view!=='dash')?'flex':'none';
-
-  if(view==='dash') renderDashboard();
-  else if(view==='config') renderConfigClassroom();
-  else if(view==='score') renderScoreClassroom();
-}
-
-function renderHeaderSelects(){
-  const ys = document.getElementById('yearSelect');
-  const cs = document.getElementById('classSelect');
-  const yIds = Object.keys(window.db.years || {});
-  
-  if(yIds.length===0){
-    ys.innerHTML = '<option value="">(無學年度)</option>';
-    cs.innerHTML = '<option value="">(無班級)</option>';
-  } else {
-    ys.innerHTML = yIds.map(id=>`<option value="${id}" ${id===window.db.lastYearId?'selected':''}>${escapeHtml(window.db.years[id].name)}</option>`).join('');
-    if(window.curYear){
-      const cIds = Object.keys(window.curYear.classes || {});
-      cs.innerHTML = cIds.length>0 ? cIds.map(id=>`<option value="${id}" ${id===window.curYear.lastClassId?'selected':''}>${escapeHtml(window.curYear.classes[id].name)}</option>`).join('') : '<option value="">(無班級)</option>';
-    }
-  }
+  if(!cur) return {plusScore:0};
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, scoreLog:[] };
+  return cur.studentScores[stuId];
 }
 
 function renderDashboard(){
   const grid = document.getElementById('dashboardClassGrid');
-  const yIds = Object.keys(window.db.years || {});
-  if(yIds.length===0){
-    grid.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;padding:3rem 1rem;">
-      <h2>尚未建立任何學年度</h2>
-      <p>請點擊右上方的「＋ 新增學年度」開始使用！</p>
+  let html = '';
+  const yIds = Object.keys(db.years || {});
+  
+  if(yIds.length === 0){
+    html = `<div style="text-align:center; padding: 4rem 1rem; grid-column: 1 / -1;">
+        <div style="font-size:3.5rem; margin-bottom:1rem;">📂</div>
+        <h2>目前沒有任何學年度資料</h2>
+        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請點擊右上方「＋ 新增學年度」開始建立！</p>
     </div>`;
-    return;
-  }
-  grid.innerHTML = yIds.map(yId=>{
-    const year = window.db.years[yId];
-    const cIds = Object.keys(year.classes || {});
-    const classesHtml = cIds.length===0 ? `<div class="empty-hint">此學年度尚無班級。</div>` :
-      cIds.map(cId=>{
-        const cls = year.classes[cId];
-        const count = (cls.boys?cls.boys.length:0) + (cls.girls?cls.girls.length:0);
-        return `<div class="class-overview-card">
-          <div class="card-content" onclick="window.enterClass('${yId}','${cId}')">
-            <h3>🏫 ${escapeHtml(year.name)} - ${escapeHtml(cls.name)}</h3>
-            <div class="meta">學生人數：${count} 人</div>
-            <div class="stats">
-              <span>分組：${cls.groups?cls.groups.length+' 組':'未分組'}</span>
-              <span>座位：${cls.seats?'已排定':'未排'}</span>
+  } else {
+    html = yIds.map(yId => {
+      const year = db.years[yId];
+      const cIds = Object.keys(year.classes || {});
+      const classesHtml = cIds.length === 0 ? 
+        `<div class="empty-hint" style="grid-column: 1 / -1;">此學年度尚無班級。</div>` : 
+        cIds.map(cId => {
+          const cls = year.classes[cId];
+          const totalCount = (cls.boys ? cls.boys.length : 0) + (cls.girls ? cls.girls.length : 0);
+          return `
+          <div class="class-overview-card">
+            <div class="card-content" onclick="window.enterClass('${yId}', '${cId}')">
+              <h3>🏫 ${escapeHtml(year.name)} - ${escapeHtml(cls.name)}</h3>
+              <div class="meta">學生總人數：${totalCount} 人</div>
             </div>
-          </div>
-        </div>`;
-      }).join('');
+          </div>`;
+        }).join('');
 
-    return `<div class="year-section">
-      <div class="year-header">
-        <h2>📁 ${escapeHtml(year.name)}</h2>
-        <button class="pill-btn small" onclick="window.dashNewClass('${yId}')">＋ 新增班級</button>
-      </div>
-      <div class="dashboard-grid">${classesHtml}</div>
-    </div>`;
-  }).join('');
+      return `<div class="year-section">
+        <div class="year-header">
+          <h2>📁 ${escapeHtml(year.name)}</h2>
+          <button class="pill-btn small" onclick="window.dashNewClass('${yId}')">＋ 新增班級</button>
+        </div>
+        <div class="dashboard-grid">${classesHtml}</div>
+      </div>`;
+    }).join('');
+  }
+  grid.innerHTML = html;
 }
 
 window.enterClass = function(yId, cId){
-  window.db.lastYearId = yId; window.curYear = window.db.years[yId];
-  window.curYear.lastClassId = cId; window.cur = window.curYear.classes[cId];
-  renderHeaderSelects(); switchView('config');
+  db.lastYearId = yId; curYear = db.years[yId];
+  curYear.lastClassId = cId; cur = curYear.classes[cId];
+  saveDB(); renderHeaderSelects(); switchView('config');
 };
 
 window.dashNewClass = function(yId){
   const name = prompt('請輸入新班級名稱：', '三年一班');
-  if(!name) return;
+  if (!name) return;
+  const targetYear = db.years[yId];
+  if(!targetYear) return;
   const cId = uid();
-  window.db.years[yId].classes[cId] = blankClass(name.trim());
-  window.enterClass(yId, cId);
-  syncToFirestore();
+  targetYear.classes[cId] = { name: name.trim(), boys:[], girls:[], groupConfig:{value:4, algo:'random'}, seatConfig:{rows:5,cols:6}, studentScores:{}, studentRoles:{} };
+  db.lastYearId = yId; curYear = targetYear;
+  curYear.lastClassId = cId; cur = curYear.classes[cId];
+  saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
 };
 
-function renderConfigClassroom(){
-  if(!window.cur) return;
-  document.getElementById('configYearKicker').textContent = window.curYear.name;
-  document.getElementById('configClassNameTitle').textContent = window.cur.name;
-  document.getElementById('classNameInput').value = window.cur.name;
-  document.getElementById('captureClassTitle').textContent = `🏫 ${window.curYear.name}・${window.cur.name} 座位表`;
-  renderRosterTables();
-  renderBrushButtons();
-  renderGroups();
-  renderConfigSeats();
+function renderHeaderSelects(){
+  const ys = document.getElementById('yearSelect');
+  if(Object.keys(db.years || {}).length === 0){
+    ys.innerHTML = '<option value="">(無學年)</option>'; ys.disabled = true;
+  } else {
+    ys.innerHTML = Object.entries(db.years).map(([id,y])=>`<option value="${id}" ${id===db.lastYearId?'selected':''}>${escapeHtml(y.name)}</option>`).join('');
+    ys.disabled = false;
+  }
+
+  const cs = document.getElementById('classSelect');
+  if(!curYear || Object.keys(curYear.classes || {}).length === 0){
+    cs.innerHTML = '<option value="">(無班級)</option>'; cs.disabled = true;
+  } else {
+    cs.innerHTML = Object.entries(curYear.classes).map(([id,c])=>`<option value="${id}" ${id===curYear.lastClassId?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+    cs.disabled = false;
+  }
 }
 
-function renderRosterTables(){
-  if(!window.cur) return;
-  const renderT = (id, list)=>{
-    const tbody = document.querySelector(`#${id} tbody`);
-    tbody.innerHTML = list.map(s=>`<tr><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score===null?'':s.score}</td><td><button class="rm" onclick="window.removeStudent('${s.id}')">✕</button></td></tr>`).join('') || `<tr><td colspan="4" style="color:var(--ink-soft);">尚無名單</td></tr>`;
-  };
-  renderT('boysTable', window.cur.boys || []);
-  renderT('girlsTable', window.cur.girls || []);
+function switchView(view){
+  currentView = view;
+  document.getElementById('dashboardView').style.display = (view === 'dash') ? 'block' : 'none';
+  document.getElementById('classroomConfigView').style.display = (view === 'config') ? 'block' : 'none';
+  document.getElementById('classroomScoreView').style.display = (view === 'score') ? 'block' : 'none';
+  document.getElementById('classroomHeaderTools').style.display = (view !== 'dash') ? 'flex' : 'none';
+
+  if(view === 'dash') renderDashboard();
+  else if(view === 'config') renderConfigClassroom();
+  else if(view === 'score') renderScoreClassroom();
 }
 
-window.removeStudent = function(id){
-  window.cur.boys = (window.cur.boys||[]).filter(s=>s.id!==id);
-  window.cur.girls = (window.cur.girls||[]).filter(s=>s.id!==id);
-  syncToFirestore(); renderRosterTables();
-};
-
-function renderBrushButtons(){
-  const html = `<button class="brush-btn ${window.activeBrushRole===''?'active':''}" onclick="window.setBrush('')">無刷子 (拖曳)</button>` +
-    (window.cur.jobsList||[]).map(j=>`<button class="brush-btn ${window.activeBrushRole===j?'active':''}" onclick="window.setBrush('${j}')">🏷️ ${escapeHtml(j)}</button>`).join('') +
-    `<button class="brush-btn eraser ${window.activeBrushRole==='ERASER'?'active':''}" onclick="window.setBrush('ERASER')">🧹 清除職位</button>`;
-  document.getElementById('configBrushBtns').innerHTML = html;
-}
-window.setBrush = function(role){ window.activeBrushRole = role; renderBrushButtons(); };
-
-function renderGroups(){
-  const wrap = document.getElementById('groupsResult');
-  if(!window.cur || !window.cur.groups){ wrap.innerHTML = '<div class="empty-hint">尚未產生分組。</div>'; return; }
-  wrap.innerHTML = `<div class="groups-grid">` + window.cur.groups.map(g=>{
-    const members = g.members.map(id=>findStudent(id)).filter(Boolean);
-    return `<div class="group-card">
-      <div class="gh" style="--gcolor:${GROUP_COLORS[g.id % GROUP_COLORS.length]};"><span>第 ${g.id+1} 組</span><span>${members.length} 人</span></div>
-      <ul>${members.map(m=>`<li><span>${m.gender==='M'?'♂':'♀'} ${escapeHtml(m.name)}</span></li>`).join('')}</ul>
-    </div>`;
-  }).join('') + `</div>`;
-}
-
-function renderConfigSeats(){
-  const area = document.getElementById('seatArea');
-  if(!window.cur || !window.cur.seats){ area.innerHTML = '<div class="empty-hint">尚未排入座位。</div>'; return; }
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${window.cur.seatConfig.cols}, 148px);">${window.cur.seats.map((occ,i)=>getBaseSeatHtml(occ, i, false)).join('')}</div>`;
-  bindSeatEvents(area, false);
-}
-
-function renderScoreClassroom(){
-  if(!window.cur) return;
-  document.getElementById('scoreViewTitle').textContent = `🎯 ${window.curYear.name}・${window.cur.name} 即時加分`;
-  renderScoreSeats();
-}
-
-function renderScoreSeats(){
-  const area = document.getElementById('scoreSeatArea');
-  if(!window.cur || !window.cur.seats){ area.innerHTML = '<div class="empty-hint">尚未排入座位。</div>'; return; }
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${window.cur.seatConfig.cols}, 148px);">${window.cur.seats.map((occ,i)=>getBaseSeatHtml(occ, i, true)).join('')}</div>`;
-  bindSeatEvents(area, true);
-}
-
-function getBaseSeatHtml(occ, idx, isScoreMode){
+function getBaseSeatHtml(occ, idx, showScore = false){
   if(!occ || !findStudent(occ.id)) return `<div class="seat empty" data-idx="${idx}">空位</div>`;
   const s = findStudent(occ.id);
-  const roles = window.cur.studentRoles[s.id] || [];
   const sc = getStudentScoreObj(s.id);
-  const roleHtml = roles.length>0 ? `<div class="role-badges-wrap">${roles.map(r=>`<span class="role-badge">${escapeHtml(r)}</span>`).join('')}</div>` : '';
-  const groupColor = GROUP_COLORS[occ.groupId % GROUP_COLORS.length];
+  const roles = cur.studentRoles[s.id] || [];
+  const groupColorHex = GROUP_COLORS[occ.groupId % GROUP_COLORS.length];
 
-  let controlsHtml = '';
-  if(isScoreMode){
-    controlsHtml = `<div class="score-control-box">
-      <span>今日: <strong>${sc.plusScore}</strong></span>
+  const roleHtml = roles.length>0 ? `<div class="role-badges-wrap">${roles.map(r=>`<span class="role-badge">${escapeHtml(r)}</span>`).join('')}</div>` : '';
+
+  let controls = '';
+  if(showScore){
+    controls = `<div class="score-control-box">
+      <span>今日加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
       <div class="score-control-btns">
-        <button class="score-btn" onclick="window.adjustScore('${s.id}', 1, event)">▲</button>
-        <button class="score-btn" onclick="window.adjustScore('${s.id}', -1, event)">▼</button>
+        <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
+        <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
+        <button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1">▼</button>
       </div>
     </div>`;
   }
 
-  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'} ${roles.length>0?'has-role':''} draggable" draggable="true" data-idx="${idx}" data-stuid="${s.id}" style="--scolor:${groupColor};">
+  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'}" style="--scolor:${groupColorHex};" data-stuid="${s.id}" data-idx="${idx}" draggable="true">
     ${roleHtml}
     <div class="seat-top-row">
       <span class="seat-name">${s.gender==='M'?'♂':'♀'} ${escapeHtml(s.name)}</span>
       <span class="seat-no">${escapeHtml(s.seatNo?'座:'+s.seatNo:'')}</span>
     </div>
-    ${controlsHtml}
-    <div class="group-tag">第 ${occ.groupId+1} 組</div>
+    ${controls}
+    <div class="group-tag">第 ${occ.groupId + 1} 組</div>
   </div>`;
 }
 
-function bindSeatEvents(container, isScoreMode){
-  container.querySelectorAll('.seat').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const id = el.dataset.stuid;
-      if(!id || window.activeBrushRole==="") return;
-      if(!window.cur.studentRoles[id]) window.cur.studentRoles[id] = [];
+function bindSeatEvents(area, isScoreView){
+  area.querySelectorAll('.seat').forEach(seatEl => {
+    seatEl.addEventListener('click', (e) => {
+      if(e.target.tagName === 'BUTTON') return;
+      const id = seatEl.dataset.stuid;
+      if(!id || !window.activeBrushRole) return;
+      
+      if(!cur.studentRoles[id]) cur.studentRoles[id] = [];
       if(window.activeBrushRole === 'ERASER'){
-        window.cur.studentRoles[id] = [];
+        cur.studentRoles[id] = [];
+        toast('已清除職位');
       } else {
-        if(window.cur.studentRoles[id].includes(window.activeBrushRole)){
-          window.cur.studentRoles[id] = window.cur.studentRoles[id].filter(r=>r!==window.activeBrushRole);
+        if(cur.studentRoles[id].includes(window.activeBrushRole)){
+          cur.studentRoles[id] = cur.studentRoles[id].filter(r=>r!==window.activeBrushRole);
         } else {
-          window.cur.studentRoles[id].push(window.activeBrushRole);
+          cur.studentRoles[id].push(window.activeBrushRole);
         }
+        toast('已指派職位');
       }
-      syncToFirestore();
-      if(isScoreMode) renderScoreSeats(); else renderConfigSeats();
+      saveDB();
+      if(isScoreView) renderScoreSeats(); else renderConfigSeats();
     });
 
-    el.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', el.dataset.idx));
-    el.addEventListener('dragover', e=> { e.preventDefault(); el.classList.add('drag-over'); });
-    el.addEventListener('dragleave', ()=> el.classList.remove('drag-over'));
-    el.addEventListener('drop', e=>{
-      e.preventDefault(); el.classList.remove('drag-over');
+    seatEl.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', seatEl.dataset.idx);
+    });
+    seatEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      seatEl.classList.add('drag-over');
+    });
+    seatEl.addEventListener('dragleave', () => seatEl.classList.remove('drag-over'));
+    seatEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      seatEl.classList.remove('drag-over');
       const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-      const toIdx = Number(el.dataset.idx);
-      if(fromIdx===toIdx) return;
-      const tmp = window.cur.seats[fromIdx];
-      window.cur.seats[fromIdx] = window.cur.seats[toIdx];
-      window.cur.seats[toIdx] = tmp;
-      syncToFirestore();
-      if(isScoreMode) renderScoreSeats(); else renderConfigSeats();
+      const toIdx = Number(seatEl.dataset.idx);
+      if(isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+      
+      const tmp = cur.seats[fromIdx];
+      cur.seats[fromIdx] = cur.seats[toIdx];
+      cur.seats[toIdx] = tmp;
+      saveDB();
+      if(isScoreView) renderScoreSeats(); else renderConfigSeats();
     });
   });
 }
 
-window.adjustScore = function(id, dir, e){
-  e.stopPropagation();
-  const sc = getStudentScoreObj(id);
-  sc.plusScore += dir;
-  syncToFirestore();
-  renderScoreSeats();
-};
+function renderConfigSeats(){
+  if(!cur) return;
+  const area = document.getElementById('seatArea');
+  if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
 
-// 監聽與按鈕事件
+  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, i, false)).join('')}</div>`;
+  bindSeatEvents(area, false);
+}
+
+function renderScoreSeats(){
+  if(!cur) return;
+  const area = document.getElementById('scoreSeatArea');
+  if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
+
+  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, i, true)).join('')}</div>`;
+  bindSeatEvents(area, true);
+
+  area.querySelectorAll('.score-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.stuid;
+      const sc = getStudentScoreObj(id);
+      
+      if(btn.classList.contains('hist-open-btn')){
+        openHistoryModal(id);
+        return;
+      }
+
+      const dir = Number(btn.dataset.dir);
+      sc.plusScore += dir;
+      if(!sc.scoreLog) sc.scoreLog = [];
+      sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta: dir, reason: dir >= 0 ? '課堂加分' : '課堂扣分' });
+      document.getElementById(`plus-disp-${id}`).textContent = sc.plusScore;
+      saveDB();
+    });
+  });
+}
+
+function openHistoryModal(stuId){
+  window.historyModalStuId = stuId;
+  const s = findStudent(stuId);
+  document.getElementById('historyStuLabel').textContent = s ? s.name : '';
+  renderHistoryLog();
+  document.getElementById('historyLogModal').style.display = 'flex';
+}
+
+function renderHistoryLog(){
+  const wrap = document.getElementById('historyLogList');
+  if(!window.historyModalStuId){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  const sc = getStudentScoreObj(window.historyModalStuId);
+  const log = sc.scoreLog || [];
+  if(log.length===0){ wrap.innerHTML = '<div class="empty-hint">尚無紀錄。</div>'; return; }
+  wrap.innerHTML = log.slice().reverse().map(entry=>{
+    const cls = entry.delta>=0 ? 'pos' : 'neg';
+    const sign = entry.delta>=0 ? ('+'+entry.delta) : entry.delta;
+    return `<div class="history-log-item"><span class="hl-delta ${cls}">${sign}</span><div><div>${escapeHtml(entry.reason||'')}</div><div style="font-size:0.7rem;color:var(--ink-soft);">${escapeHtml(entry.t||'')}</div></div></div>`;
+  }).join('');
+}
+
+document.getElementById('historyLogCloseBtn').addEventListener('click', ()=> document.getElementById('historyLogModal').style.display='none');
+
+document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
+  const stuId = window.historyModalStuId; if(!stuId) return;
+  const deltaStr = prompt('請輸入加分數值（負數代表扣分）：', '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0) return;
+  const reason = prompt('請輸入原因（選填）：', '') || '';
+  const sc = getStudentScoreObj(stuId);
+  sc.plusScore += delta;
+  if(!sc.scoreLog) sc.scoreLog = [];
+  sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason });
+  saveDB(); renderHistoryLog();
+  if(currentView==='score') renderScoreSeats();
+});
+
+function renderConfigClassroom(){
+  if(!cur) return;
+  document.getElementById('configYearKicker').textContent = curYear.name;
+  document.getElementById('configClassNameTitle').textContent = cur.name;
+  document.getElementById('classNameInput').value = cur.name;
+  document.getElementById('captureClassTitle').textContent = `🏫 ${curYear.name}・${cur.name} 座位表`;
+  renderRosterTables();
+  renderBrushBtns();
+  renderConfigSeats();
+}
+
+function renderScoreClassroom(){
+  if(!cur) return;
+  document.getElementById('scoreViewTitle').textContent = `🎯 ${curYear.name}・${cur.name} 即時加分面板`;
+  document.getElementById('scoreCaptureClassTitle').textContent = `🎯 ${curYear.name}・${cur.name} 加分座位表`;
+  renderBrushBtns();
+  renderScoreSeats();
+}
+
+function renderBrushBtns(){
+  if(!cur) return;
+  const jobs = cur.jobsList || ['組長', '工具長', '材料長', '秘書長', '小老師'];
+  const html = `<button class="brush-btn ${window.activeBrushRole===''?'active':''}" data-role="">無刷子 (拖曳位子)</button>` +
+    jobs.map(j => `<button class="brush-btn ${window.activeBrushRole===j?'active':''}" data-role="${escapeHtml(j)}">🏷️ ${escapeHtml(j)}</button>`).join('') +
+    `<button class="brush-btn eraser ${window.activeBrushRole==='ERASER'?'active':''}" data-role="ERASER">🧹 清除角色</button>`;
+
+  const cfgArea = document.getElementById('configBrushBtns');
+  const scoreArea = document.getElementById('scoreBrushBtns');
+  if(cfgArea) cfgArea.innerHTML = html;
+  if(scoreArea) scoreArea.innerHTML = html;
+
+  document.querySelectorAll('.brush-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.activeBrushRole = btn.dataset.role;
+      renderBrushBtns();
+    });
+  });
+}
+
+function parseRoster(text, gender){
+  return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+    let parts = line.split(/[,，\s\t]+/);
+    let seatNo='', name='', score=null;
+    if(parts.length>=2){ seatNo=parts[0]; name=parts[1]; if(parts[2]) score=Number(parts[2])||null; }
+    else if(parts.length===1){ name=parts[0]; }
+    return { id: gender+'_'+uid(), seatNo, name, score, gender };
+  }).filter(s=>s.name);
+}
+
+function renderRosterTables(){
+  if(!cur) return;
+  const rT = (id, list) => {
+    const tbody = document.querySelector(`#${id} tbody`);
+    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score!==null?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
+    tbody.querySelectorAll('.rm').forEach(btn=> btn.addEventListener('click', ()=>{
+      const idx = list.findIndex(x=>x.id===btn.closest('tr').dataset.id);
+      if(idx>-1){ list.splice(idx,1); saveDB(); renderRosterTables(); }
+    }));
+  };
+  rT('boysTable', cur.boys || []); rT('girlsTable', cur.girls || []);
+}
+
 document.getElementById('goDashboardBtn').addEventListener('click', ()=> switchView('dash'));
 document.getElementById('backToDashBtn').addEventListener('click', ()=> switchView('dash'));
 document.getElementById('goToScoreModeBtn').addEventListener('click', ()=> switchView('score'));
 document.getElementById('backToConfigBtn').addEventListener('click', ()=> switchView('config'));
 
-document.getElementById('openSheetsModalBtn').addEventListener('click', ()=>{
-  renderSheetsModalStatus();
-  document.getElementById('sheetsModal').style.display = 'flex';
+document.getElementById('yearSelect').addEventListener('change', (e) => {
+  const yId = e.target.value;
+  if (db.years[yId]) {
+    db.lastYearId = yId;
+    curYear = db.years[yId];
+    const cIds = Object.keys(curYear.classes || {});
+    curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
+    cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
+    saveDB();
+    renderHeaderSelects();
+    if (currentView === 'config') renderConfigClassroom();
+    else if (currentView === 'score') renderScoreClassroom();
+    else renderDashboard();
+  }
 });
-document.getElementById('closeSheetsModalBtn').addEventListener('click', ()=> document.getElementById('sheetsModal').style.display='none');
-document.getElementById('authAndLinkSheetBtn').addEventListener('click', requestGoogleAuth);
-document.getElementById('pushToSheetBtn').addEventListener('click', ()=> pushScoresToGoogleSheet(false));
-document.getElementById('quickSyncSheetBtn').addEventListener('click', ()=> pushScoresToGoogleSheet(false));
+
+document.getElementById('classSelect').addEventListener('change', (e) => {
+  const cId = e.target.value;
+  if (curYear && curYear.classes[cId]) {
+    curYear.lastClassId = cId;
+    cur = curYear.classes[cId];
+    saveDB();
+    renderHeaderSelects();
+    if (currentView === 'config') renderConfigClassroom();
+    else if (currentView === 'score') renderScoreClassroom();
+  }
+});
+
+document.getElementById('decGroupSizeBtn').addEventListener('click', ()=>{ if(cur){ cur.groupConfig.value = Math.max(1, (cur.groupConfig.value||4)-1); document.getElementById('groupSizeVal').textContent = cur.groupConfig.value; saveDB(); } });
+document.getElementById('incGroupSizeBtn').addEventListener('click', ()=>{ if(cur){ cur.groupConfig.value = (cur.groupConfig.value||4)+1; document.getElementById('groupSizeVal').textContent = cur.groupConfig.value; saveDB(); } });
+
+document.getElementById('decRowsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = Math.max(1, (cur.seatConfig.rows||5)-1); document.getElementById('rowsVal').textContent = cur.seatConfig.rows; saveDB(); } });
+document.getElementById('incRowsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = (cur.seatConfig.rows||5)+1; document.getElementById('rowsVal').textContent = cur.seatConfig.rows; saveDB(); } });
+
+document.getElementById('decColsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = Math.max(1, (cur.seatConfig.cols||6)-1); document.getElementById('colsVal').textContent = cur.seatConfig.cols; saveDB(); } });
+document.getElementById('incColsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = (cur.seatConfig.cols||6)+1; document.getElementById('colsVal').textContent = cur.seatConfig.cols; saveDB(); } });
 
 document.getElementById('newYearBtn').addEventListener('click', ()=>{
   const name = prompt('請輸入學年度名稱：', '115學年度');
-  if(!name) return;
-  const y = blankYear(name.trim());
-  window.db.years[y.id] = y; window.db.lastYearId = y.id;
-  window.curYear = y; window.cur = null;
-  syncToFirestore(); renderHeaderSelects(); renderDashboard();
+  if (!name) return;
+  const y = { id: uid(), name: name.trim(), classes:{} };
+  db.years[y.id] = y; db.lastYearId = y.id; curYear = y; cur = null;
+  saveDB(); renderHeaderSelects(); switchView('dash'); toast('已建立新學年度');
 });
 
 document.getElementById('loadRosterBtn').addEventListener('click', ()=>{
-  if(!window.cur) return;
-  const parseLines = (text, gender)=> text.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
-    const p = l.split(/[,，\t\s]+/);
-    return { id: gender+'_'+uid(), seatNo: p[0]||'', name: p[1]||'學生', score: Number(p[2])||null, gender };
-  });
-  const b = parseLines(document.getElementById('boysInput').value, 'M');
-  const g = parseLines(document.getElementById('girlsInput').value, 'F');
-  window.cur.boys = (window.cur.boys||[]).concat(b);
-  window.cur.girls = (window.cur.girls||[]).concat(g);
-  document.getElementById('boysInput').value = ''; document.getElementById('girlsInput').value = '';
-  syncToFirestore(); renderRosterTables(); toast(`已載入 ${b.length+g.length} 位學生`);
+  if(!cur) return;
+  const b = parseRoster(document.getElementById('boysInput').value,'M');
+  const g = parseRoster(document.getElementById('girlsInput').value,'F');
+  cur.boys = (cur.boys||[]).concat(b); cur.girls = (cur.girls||[]).concat(g);
+  document.getElementById('boysInput').value=''; document.getElementById('girlsInput').value='';
+  saveDB(); renderRosterTables(); toast('已載入學生名單');
 });
 
 document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
-  if(!window.cur) return;
-  const students = allStudents();
-  if(students.length===0){ toast('請先新增學生'); return; }
-  const size = window.cur.groupConfig.value || 4;
-  const numGroups = Math.max(1, Math.ceil(students.length / size));
-  const groups = Array.from({length: numGroups}, (_,i)=>({id:i, members:[]}));
+  if(!cur) return;
+  const stus = allStudents();
+  if(stus.length===0){ toast('請先輸入學生名單', true); return; }
+  const size = cur.groupConfig.value || 4;
+  const numGroups = Math.ceil(stus.length / size);
+  const groups = Array.from({length: numGroups}, (_, i) => ({ id: i, members: [] }));
+  stus.forEach((s, i) => groups[i % numGroups].members.push(s.id));
+  cur.groups = groups; saveDB(); toast('自動分組完成');
   
-  students.forEach((s, idx)=>{ groups[idx % numGroups].members.push(s.id); });
-  window.cur.groups = groups;
-  window.cur.seats = null;
-  syncToFirestore(); renderGroups(); renderConfigSeats(); toast('分組完成');
+  const resArea = document.getElementById('groupsResult');
+  resArea.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.8rem;">` +
+    groups.map(g => `<div style="border:2px solid var(--ink);border-radius:10px;padding:0.6rem;background:var(--paper-deep);">
+      <div style="font-weight:800;font-size:0.85rem;margin-bottom:0.4rem;">第 ${g.id+1} 組 (${g.members.length}人)</div>
+      <div style="font-size:0.8rem;color:var(--ink-soft);">${g.members.map(id => findStudent(id)?.name).join('、')}</div>
+    </div>`).join('') + `</div>`;
 });
 
 document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
-  if(!window.cur || !window.cur.groups){ toast('請先產生分組'); return; }
-  const total = window.cur.seatConfig.rows * window.cur.seatConfig.cols;
-  const students = window.cur.groups.flatMap(g=>g.members.map(id=>({id, groupId:g.id})));
-  if(students.length > total){ toast(`座位數(${total})不足，請增加排數或行數`, true); return; }
-  const seats = new Array(total).fill(null);
-  students.forEach((s,i)=>{ seats[i]=s; });
-  window.cur.seats = seats;
-  syncToFirestore(); renderConfigSeats(); toast('已排入座位！可拖曳互換位置。');
+  if(!cur || !cur.groups){ toast('請先完成自動分組', true); return; }
+  const seats = [];
+  cur.groups.forEach(g => {
+    g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
+  });
+  cur.seats = seats;
+  saveDB(); renderConfigSeats(); toast('座位排定！可拖曳卡片互換位置');
+});
+
+document.getElementById('firebaseModalBtn').addEventListener('click', ()=>{
+  document.getElementById('firebaseModal').style.display = 'flex';
+  document.getElementById('fbConfigInput').value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
+});
+document.getElementById('closeFbModalBtn').addEventListener('click', ()=>{
+  document.getElementById('firebaseModal').style.display = 'none';
+});
+
+document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
+  const val = document.getElementById('fbConfigInput').value.trim();
+  if(!val){ toast('請輸入 Config 設定', true); return; }
+  try {
+    const parsed = JSON.parse(val);
+    localStorage.setItem('user_firebase_config', JSON.stringify(parsed));
+    document.getElementById('firebaseModal').style.display = 'none';
+    toast('已儲存設定，正在嘗試連線...');
+    initFirebase();
+  } catch(e) {
+    toast('Config 格式不正確', true);
+  }
+});
+
+document.getElementById('clearFbConfigBtn').addEventListener('click', ()=>{
+  localStorage.removeItem('user_firebase_config');
+  document.getElementById('firebaseModal').style.display = 'none';
+  toast('已恢復預設專案設定');
+  initFirebase();
 });
 
 document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
-  if(!window.cur){ toast('請先選擇班級'); return; }
-  const aoa = [['座號','姓名','性別','工作角色','原始分數','今日加分','總分']];
-  allStudents().forEach(s=>{
-    const sc = getStudentScoreObj(s.id);
-    const roles = (window.cur.studentRoles[s.id]||[]).join('、');
-    aoa.push([s.seatNo, s.name, s.gender==='M'?'男':'女', roles, s.score||'', sc.plusScore, (Number(s.score)||0) + sc.plusScore]);
-  });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績表');
-  XLSX.writeFile(wb, `${window.curYear.name}_${window.cur.name}_成績單.xlsx`);
-  toast('已下載 Excel 檔案');
+  if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
+  try{
+    const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
+    const aoa = [['座號','姓名','性別','工作角色',`${dateStr} 今日加分`,'總分']];
+    allStudents().forEach(s=>{
+      const sc = getStudentScoreObj(s.id);
+      const roles = (cur.studentRoles[s.id]||[]).join('、');
+      const baseScore = Number(s.score) || 0;
+      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, sc.plusScore, baseScore + sc.plusScore ]);
+    });
+    const wb = XLSX.utils.book_new(); 
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績總表');
+    XLSX.writeFile(wb, `${curYear.name}_${cur.name}_成績紀錄表.xlsx`); 
+    toast('已成功下載 Excel 檔案！');
+  }catch(e){ toast('匯出失敗', true); }
 });
 
-// 啟動系統
+document.getElementById('exportJpgBtn').addEventListener('click', async ()=>{
+  if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
+  const captureArea = document.getElementById('scoreViewCaptureArea');
+  try{
+    const canvas = await html2canvas(captureArea, {backgroundColor:'#FFFFFF', scale:2});
+    const link = document.createElement('a');
+    link.download = `${curYear.name}_${cur.name}_座位圖.jpg`;
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click(); toast('已成功下載 JPG');
+  }catch(e){ toast('匯出失敗', true); }
+});
+
 initFirebase();
 </script>
 </body>
