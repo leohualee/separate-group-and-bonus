@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Google API 回呼與授權模組 -->
+<!-- 確保 Google API 回呼函數在腳本載入前就存在，解決無法連結雲端的問題 -->
 <script>
   window.accessToken = null;
   window.tokenClient = null;
@@ -30,7 +30,7 @@
         scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
         callback: (resp) => {
           if (resp.error !== undefined) {
-            if(window.toast) window.toast('授權失敗，請確認彈出視窗未被阻擋。', true);
+            if(window.toast) window.toast('授權失敗，請確認彈出視窗未被阻擋。');
             return;
           }
           window.accessToken = resp.access_token;
@@ -47,7 +47,7 @@
     } else if (window.tokenClient) {
       window.tokenClient.requestAccessToken({prompt: 'consent'});
     } else {
-      if(window.toast) window.toast('Google 模組尚未載入完成，請稍後再試。', true);
+      if(window.toast) window.toast('Google 模組尚未載入完成，請稍後再試。');
     }
   };
 </script>
@@ -91,7 +91,7 @@ select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor:
 
 .sync-warning-bar{ display:none; align-items:center; gap:0.6rem; background:var(--butter); border:2px solid var(--coral-deep); border-radius:999px; padding:0.35rem 0.9rem; font-size:0.78rem; font-weight:700; color:var(--ink); }
 
-/* 對話框 modal */
+/* 對話框 */
 .modal-overlay{ position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center;z-index:1000;display:none; padding:1rem;overflow-y:auto; }
 .modal-box{ background:var(--white);border:3px solid var(--ink);border-radius:var(--radius); padding:2rem;width:100%;max-width:560px;box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh;overflow-y:auto; }
 .modal-box h3{margin-bottom:1rem;font-size:1.2rem;}
@@ -250,7 +250,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 .export-btn:hover{background:var(--butter);}
 
 .empty-hint{font-size:0.85rem;color:var(--ink-soft);padding:1rem;border:2px dashed var(--line);border-radius:10px;text-align:center;}
-.toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:1100;opacity:0;pointer-events:none;transition:opacity .3s ease, transform .3s ease; max-width:90vw;text-align:center; }
+.toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s ease, transform .3s ease; max-width:90vw;text-align:center; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 .toast.toast-error{background:#c9564a;}
 
@@ -297,7 +297,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 </style>
 </head>
 <body>
-
 <header class="top">
   <div class="top-inner">
     <div class="brand" id="goDashboardBtn"><span class="dot"></span>分組座位與即時計分系統＋</div>
@@ -312,13 +311,12 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <span class="bar-divider" id="classDivider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
       <button class="pill-btn small primary" id="gdriveModalBtn">☁️ 雲端同步設定</button>
-      <span class="sync-warning-bar" id="syncWarningBar">⚠️ 自動同步已開啟但尚未授權，請點此重新連結</span>
+      <span class="sync-warning-bar" id="syncWarningBar">⚠️ 自動同步已開啟但尚未授權，請重新連結</span>
       <span class="save-note" id="saveNote">已自動儲存</span>
     </div>
   </div>
 </header>
 
-<!-- Google 雲端同步對話框 -->
 <div class="modal-overlay" id="gdriveModal">
   <div class="modal-box">
     <h3>☁️ Google 雲端同步</h3>
@@ -326,12 +324,12 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
     <div style="background:var(--lilac);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
       <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">🌐 跨裝置主資料庫同步（所有學年／班級／名單／分組／座位）</div>
-      <p style="font-size:0.8rem;margin-bottom:0.6rem;">此功能會把「整個資料庫」存成雲端硬碟裡的一個 JSON 檔（<code id="masterFileNameLabel">classroom_master_database.json</code>），不同裝置只要授權同一個 Google 帳號，就能讀寫同一份資料。<br><strong>⚠️ 下載會覆蓋本機目前所有資料，下載前建議確認備份。</strong></p>
+      <p style="font-size:0.8rem;margin-bottom:0.6rem;">此功能會把「整個資料庫」存成雲端硬碟裡的一個 JSON 檔（<code id="masterFileNameLabel">classroom_master_database.json</code>），不同裝置只要用同一個 Google 帳號授權，就能下載或上傳同一份資料，達到跨裝置同步。<br><strong>⚠️ 下載會直接覆蓋本機目前所有資料，上傳前建議先確認本機是最新版本。</strong></p>
       <div id="masterSyncStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結雲端主資料庫</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
-        <button class="pill-btn primary small" id="linkMasterDBBtn">🔍 尋找／連結雲端主資料庫</button>
+        <button class="pill-btn primary small" id="linkMasterDBBtn">🔍 尋找／建立雲端主資料庫</button>
         <button class="pill-btn small" id="pushMasterDBBtn">⬆️ 上傳本機資料到雲端</button>
-        <button class="pill-btn small" id="pullMasterDBBtn">⬇️ 從雲端下載（載入資料）</button>
+        <button class="pill-btn small" id="pullMasterDBBtn">⬇️ 從雲端下載（覆蓋本機）</button>
       </div>
       <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer;">
         <input type="checkbox" id="masterAutoSyncToggle" style="width:16px;height:16px;accent-color:var(--coral-deep);">
@@ -341,12 +339,12 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
     <div style="background:var(--mint);padding:1rem;border-radius:10px;margin-bottom:1rem;border:1.5px solid var(--ink);">
       <div style="font-weight:800;margin-bottom:0.4rem;font-size:0.95rem;">📊 獨立工作表雙向同步（單一班級成績）</div>
-      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬 Google 試算表，分頁名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄，跨日會將「今日加分」歸零並保留於累計分數。</strong></p>
+      <p style="font-size:0.8rem;margin-bottom:0.6rem;">系統會自動建立專屬工作表，名稱為 <strong id="modalSheetNameLabel">學年-班級</strong>。<br><strong>每天最多新增一欄（同一天內重複推送只會更新當天那一欄）；Excel 自行增加的額外欄位也會完全保留。</strong><br>📅 <strong>換日期時，網頁上的「今日加分」與「今日作品評級」會自動歸零（如已連結雲端且已授權，會先把前一天的最終加分存檔）；「累計加分」「累計扣分」「總分」會持續累加，不會因歸零而遺失。</strong></p>
       <div id="sheetLinkStatus" style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:0.7rem;">尚未連結試算表</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.7rem;">
          <button class="pill-btn primary small" id="linkSheetBtn">🔗 連結／建立專屬工作表</button>
-         <button class="pill-btn small" id="pushSheetBtn">⬆️ 手動推送分數</button>
-         <button class="pill-btn small" id="pullSheetBtn">⬇️ 從試算表拉回分數</button>
+         <button class="pill-btn small" id="pushSheetBtn">⬆️ 手動推送</button>
+         <button class="pill-btn small" id="pullSheetBtn">⬇️ 從試算表拉回</button>
       </div>
       <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer;">
         <input type="checkbox" id="autoSyncToggle" style="width:16px;height:16px;accent-color:var(--coral-deep);">
@@ -366,15 +364,14 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   </div>
 </div>
 
-<!-- 封存清單 Modal -->
 <div class="modal-overlay" id="archiveListModal">
   <div class="modal-box">
     <h3>📦 已封存學年度</h3>
-    <p>封存後的學年資料已從主資料庫移除，僅保留基本紀錄。若要還原查看或編輯，請選擇備份的 JSON 檔案匯入。</p>
+    <p>封存後的學年資料已從主資料庫移除，僅保留下方基本資訊。若要查看或編輯，請下載當初匯出的備份 JSON 後用「還原封存檔」匯入。</p>
     <div class="archive-list" id="archiveListWrap"><div class="empty-hint">目前沒有已封存的學年度。</div></div>
     <div style="background:var(--paper-deep);padding:1rem;border-radius:10px;margin-top:1rem;border:1.5px solid var(--line);">
       <div style="font-weight:800;margin-bottom:0.5rem;font-size:0.85rem;">📤 還原封存檔</div>
-      <p style="font-size:0.78rem;margin-bottom:0.6rem;">選擇封存時下載的 JSON 檔案，即可還原回主資料庫。</p>
+      <p style="font-size:0.78rem;margin-bottom:0.6rem;">選擇封存學年度時下載的 JSON 檔案，即可把該學年度資料還原回主資料庫。</p>
       <button class="pill-btn small" id="restoreArchiveBtn">選擇封存 JSON 檔案</button>
       <input type="file" id="restoreArchiveFile" accept=".json" style="display:none;">
     </div>
@@ -382,7 +379,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   </div>
 </div>
 
-<!-- 歷史紀錄 Modal -->
 <div class="modal-overlay" id="historyLogModal">
   <div class="modal-box">
     <h3>📜 加分歷史紀錄</h3>
@@ -395,30 +391,6 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   </div>
 </div>
 
-<!-- 自訂通用對話框 (無 native confirm/prompt) -->
-<div class="modal-overlay" id="customConfirmModal">
-  <div class="modal-box" style="max-width:440px;">
-    <h3 id="customConfirmTitle">確認提醒</h3>
-    <p id="customConfirmMsg"></p>
-    <div class="modal-btns">
-      <button class="pill-btn" id="customConfirmCancelBtn">取消</button>
-      <button class="pill-btn primary" id="customConfirmOkBtn">確定</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="customPromptModal">
-  <div class="modal-box" style="max-width:440px;">
-    <h3 id="customPromptTitle">請輸入</h3>
-    <p id="customPromptMsg"></p>
-    <input type="text" id="customPromptInput" class="text-input" style="margin-bottom:1rem;">
-    <div class="modal-btns">
-      <button class="pill-btn" id="customPromptCancelBtn">取消</button>
-      <button class="pill-btn primary" id="customPromptOkBtn">確定</button>
-    </div>
-  </div>
-</div>
-
 <div class="wrap">
   <!-- 首頁總覽儀表板 -->
   <div id="dashboardView" class="dashboard-view">
@@ -428,6 +400,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <p>點選卡片右上角可進行「批量刪除」，點擊卡片內容即可進入該班級進行「分組設定」與「即時加分計分」！</p>
     </section>
     
+    <!-- 批次管理工具列 (首頁用) -->
     <div class="batch-toolbar" id="dashBatchToolbar" style="bottom: 1.4rem;">
       <span class="bt-count" id="dashBatchCount">已選 0 個班級</span>
       <button class="bt-danger" id="dashBatchDeleteBtn">🗑️ 刪除選取的班級</button>
@@ -580,7 +553,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       </div>
 
       <div class="job-brush-panel">
-        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派，可重複疊加多個角色）：</div>
+        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（選好後，點擊下方座位即可指派，可重複疊加多個角色）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
         <div class="batch-toggle-row">
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;">
@@ -692,6 +665,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- 系統核心邏輯 -->
 <script>
 const memStore = {};
 const storage = {
@@ -706,64 +680,19 @@ const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4
 const uid = ()=> Math.random().toString(36).slice(2,9);
 const MASTER_DB_FILENAME = 'classroom_master_database.json';
 
-window.db = { years:{}, lastYearId:null, archivedYearsMeta:[], masterSync: { fileId: null, autoSync: false, lastSyncedAt: null } };
+window.db = { years:{}, lastYearId:null, archivedYearsMeta:[] };
 window.curYear = null;
 window.cur = null;
 window.activeBrushRole = "";
 window.batchMode = false;
 window.selectedIds = new Set();
 window.historyModalStuId = null;
+// 首頁班級卡片批次選取
 window.dashSelectedClasses = new Set(); 
 let currentView = 'dash';
 let autoPushTimer = null;
 let masterAutoPushTimer = null;
 let toastTimer;
-
-// 自訂 Modal 替代 native confirm/prompt
-function showConfirmModal(title, msg, onConfirm){
-  document.getElementById('customConfirmTitle').textContent = title || '確認提醒';
-  document.getElementById('customConfirmMsg').textContent = msg || '確定繼續嗎？';
-  const modal = document.getElementById('customConfirmModal');
-  modal.style.display = 'flex';
-  
-  const okBtn = document.getElementById('customConfirmOkBtn');
-  const cancelBtn = document.getElementById('customConfirmCancelBtn');
-  
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  
-  okBtn.onclick = () => { cleanup(); if(onConfirm) onConfirm(); };
-  cancelBtn.onclick = () => { cleanup(); };
-}
-
-function showPromptModal(title, msg, defaultVal, onOk){
-  document.getElementById('customPromptTitle').textContent = title || '請輸入';
-  document.getElementById('customPromptMsg').textContent = msg || '';
-  const input = document.getElementById('customPromptInput');
-  input.value = defaultVal || '';
-  const modal = document.getElementById('customPromptModal');
-  modal.style.display = 'flex';
-  input.focus();
-  
-  const okBtn = document.getElementById('customPromptOkBtn');
-  const cancelBtn = document.getElementById('customPromptCancelBtn');
-  
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  
-  okBtn.onclick = () => {
-    const val = input.value;
-    cleanup();
-    if(onOk) onOk(val);
-  };
-  cancelBtn.onclick = () => { cleanup(); };
-}
 
 function blankClass(name){
   return {
@@ -782,12 +711,16 @@ function blankYear(name){
   return { id:yid, name, classes:{}, lastClassId:null };
 }
 
-// 讀取並重新整理當前選取的指標
-function refreshActivePointers(){
+function loadDB(){
+  const raw = storage.get('sgh_db_v15');
+  if(raw){ try{ db = JSON.parse(raw); }catch(e){ db = { years:{}, lastYearId:null, archivedYearsMeta:[] }; } }
+  else { db = { years:{}, lastYearId:null, archivedYearsMeta:[] }; }
+  
   if(!db.years) db.years = {};
   if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
   if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
 
+  // 嘗試恢復上次選擇的學年
   if(db.lastYearId && db.years[db.lastYearId]){
     curYear = db.years[db.lastYearId];
   } else {
@@ -801,6 +734,7 @@ function refreshActivePointers(){
     }
   }
 
+  // 嘗試恢復上次選擇的班級
   if(curYear){
     if(curYear.lastClassId && curYear.classes[curYear.lastClassId]){
       cur = curYear.classes[curYear.lastClassId];
@@ -817,9 +751,9 @@ function refreshActivePointers(){
   } else {
     cur = null;
   }
-
+  
+  // 針對現存班級進行資料防錯初始化
   if(cur){
-    if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random', useConstraints:false };
     if(!cur.groupConfig.algo) cur.groupConfig.algo = 'random';
     if(cur.groupConfig.useConstraints === undefined) cur.groupConfig.useConstraints = false;
     if(!cur.constraints) cur.constraints = [];
@@ -828,13 +762,6 @@ function refreshActivePointers(){
     if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '環境長', '小老師'];
     if(!cur.lastActiveDate) cur.lastActiveDate = new Date().toLocaleDateString('sv-SE');
   }
-}
-
-function loadDBFromStorage(){
-  const raw = storage.get('sgh_db_v15');
-  if(raw){ try{ db = JSON.parse(raw); }catch(e){ db = { years:{}, lastYearId:null, archivedYearsMeta:[], masterSync:{fileId:null, autoSync:false} }; } }
-  else { db = { years:{}, lastYearId:null, archivedYearsMeta:[], masterSync:{fileId:null, autoSync:false} }; }
-  refreshActivePointers();
 }
 
 function saveDB(skipMasterPush){
@@ -847,7 +774,7 @@ function saveDB(skipMasterPush){
     } else {
       note.classList.add('error');
       note.textContent = '⚠️ 儲存失敗！空間可能已滿';
-      toast('儲存失敗，請盡快匯出備份檔！', true);
+      toast('儲存失敗，請盡快匯出備份檔！');
     }
   }
   updateSyncWarning();
@@ -862,11 +789,6 @@ function updateSyncWarning(){
   bar.style.display = shouldWarn ? 'inline-flex' : 'none';
 }
 
-// 點擊警告欄自動引導授權
-document.getElementById('syncWarningBar').addEventListener('click', ()=>{
-  window.requireAuth('pushMasterDB');
-});
-
 function allStudents(){ return cur ? [...cur.boys, ...cur.girls] : []; }
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
 function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -874,7 +796,7 @@ function toast(msg, isError){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   t.classList.toggle('toast-error', !!isError);
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
 }
 window.toast = toast; 
 
@@ -887,7 +809,7 @@ window.executePendingAction = function() {
   else if (window.pendingAction === 'pushMasterDB') pushMasterDBToCloud(false);
   else if (window.pendingAction === 'pullMasterDB') pullMasterDBFromCloud();
   window.pendingAction = null;
-};
+}
 
 function todayKey(){ return new Date().toLocaleDateString('sv-SE'); }
 
@@ -903,7 +825,7 @@ function resetClassScoresForNewDay(cls, prevDateKey){
   });
   cls.lastActiveDate = todayKey();
   saveDB();
-  toast(`跨日自動歸零：「${cls.name}」的今日加分已重置，歷史分數已保留`);
+  toast(`偵測到新的一天，「${cls.name}」的加分已歸零，先前紀錄已保留`);
   if(cur === cls){
     if(currentView==='score') renderScoreSeats();
     else if(currentView==='config') renderConfigSeats();
@@ -922,11 +844,11 @@ function checkDayRollover(){
     const prevDate = new Date(prevDateKey + 'T12:00:00');
     pushScoresToSheet(true, prevDate).then(ok=>{
       resetClassScoresForNewDay(targetClass, prevDateKey);
-      if(!ok) toast('⚠️ 前一天分數存檔至雲端失敗，但已進行今日重置', true);
+      if(!ok) toast('⚠️ 前一天的加分推送雲端失敗，已先歸零', true);
     });
   } else {
     resetClassScoresForNewDay(targetClass, prevDateKey);
-    if(targetClass.sheetId) toast('⚠️ 尚未授權，前一天的加分未同步至 Google 試算表', true);
+    if(targetClass.sheetId) toast('⚠️ 尚未授權，前一天的加分未同步', true);
   }
 }
 
@@ -958,23 +880,23 @@ document.getElementById('backToConfigBtn').addEventListener('click', ()=> switch
 function renderDashboard(){
   const grid = document.getElementById('dashboardClassGrid');
   let html = '';
-  const yIds = Object.keys(db.years || {});
+  const yIds = Object.keys(db.years);
   
   if(yIds.length === 0){
     html = `
     <div style="text-align:center; padding: 4rem 1rem; grid-column: 1 / -1;">
         <div style="font-size:3.5rem; margin-bottom:1rem;">📂</div>
         <h2 style="margin-bottom:0.5rem; font-size:1.8rem;">目前沒有任何學年度資料</h2>
-        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請建立學年度，或從雲端／本機還原資料。</p>
+        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請先建立一個學年度，再開始新增班級座位表。若您在其他裝置已經有資料，也可以點下方按鈕從雲端下載。</p>
         <div style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;">
           <button class="pill-btn primary" onclick="document.getElementById('newYearBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">＋ 建立第一個學年度</button>
-          <button class="pill-btn" onclick="document.getElementById('gdriveModalBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">☁️ 雲端同步與下載</button>
+          <button class="pill-btn" onclick="document.getElementById('gdriveModalBtn').click()" style="font-size:1.1rem; padding: 0.8rem 1.6rem;">☁️ 從雲端下載資料</button>
         </div>
     </div>`;
   } else {
     html = yIds.map(yId => {
       const year = db.years[yId];
-      const cIds = Object.keys(year.classes || {});
+      const cIds = Object.keys(year.classes);
       
       const classesHtml = cIds.length === 0 ? 
         `<div class="empty-hint" style="grid-column: 1 / -1;">此學年度尚無班級，請點擊右上方按鈕新增。</div>` : 
@@ -996,7 +918,7 @@ function renderDashboard(){
               </div>
             </div>
           </div>`;
-        }).join('');
+      }).join('');
 
       return `
       <div class="year-section">
@@ -1017,6 +939,7 @@ function renderDashboard(){
   updateDashBatchToolbar();
 }
 
+// 處理首頁卡片的點選與核取方塊
 document.getElementById('dashboardClassGrid').addEventListener('click', e => {
   const checkWrap = e.target.closest('.card-check');
   if(checkWrap){
@@ -1046,24 +969,25 @@ document.getElementById('dashBatchClearBtn').addEventListener('click', ()=>{
 document.getElementById('dashBatchDeleteBtn').addEventListener('click', ()=>{
   const n = window.dashSelectedClasses.size;
   if(n === 0) return;
-  showConfirmModal('確定刪除？', `確定要刪除選取的 ${n} 個班級嗎？此操作無法復原。`, () => {
-    window.dashSelectedClasses.forEach(key => {
-      const [yId, cId] = key.split('|');
-      if(db.years[yId] && db.years[yId].classes[cId]){
-        delete db.years[yId].classes[cId];
-        if(curYear && curYear.id === yId && curYear.lastClassId === cId){
-          const remaining = Object.keys(db.years[yId].classes);
-          curYear.lastClassId = remaining.length > 0 ? remaining[0] : null;
-          cur = curYear.lastClassId ? db.years[yId].classes[curYear.lastClassId] : null;
-        }
+  if(!confirm(`確定要刪除選取的 ${n} 個班級嗎？此操作無法復原。`)) return;
+  
+  window.dashSelectedClasses.forEach(key => {
+    const [yId, cId] = key.split('|');
+    if(db.years[yId] && db.years[yId].classes[cId]){
+      delete db.years[yId].classes[cId];
+      // 如果刪除了當前所在的班級，清除狀態
+      if(curYear && curYear.id === yId && curYear.lastClassId === cId){
+        const remaining = Object.keys(db.years[yId].classes);
+        curYear.lastClassId = remaining.length > 0 ? remaining[0] : null;
+        cur = curYear.lastClassId ? db.years[yId].classes[curYear.lastClassId] : null;
       }
-    });
-    window.dashSelectedClasses.clear();
-    saveDB();
-    renderHeaderSelects();
-    renderDashboard();
-    toast(`已成功刪除 ${n} 個班級`);
+    }
   });
+  window.dashSelectedClasses.clear();
+  saveDB();
+  renderHeaderSelects();
+  renderDashboard();
+  toast(`已成功刪除 ${n} 個班級`);
 });
 
 window.enterClass = function(yId, cId){
@@ -1074,7 +998,7 @@ window.enterClass = function(yId, cId){
 
 function renderHeaderSelects(){
   const ys = document.getElementById('yearSelect');
-  if(Object.keys(db.years || {}).length === 0){
+  if(Object.keys(db.years).length === 0){
       ys.innerHTML = '<option value="">(無學年資料)</option>';
       ys.disabled = true;
   } else {
@@ -1083,7 +1007,7 @@ function renderHeaderSelects(){
   }
 
   const cs = document.getElementById('classSelect');
-  if(!curYear || Object.keys(curYear.classes || {}).length === 0){
+  if(!curYear || Object.keys(curYear.classes).length === 0){
       cs.innerHTML = '<option value="">(無班級資料)</option>';
       cs.disabled = true;
   } else {
@@ -1091,6 +1015,7 @@ function renderHeaderSelects(){
       cs.disabled = false;
   }
 
+  // 根據是否有當前學年/班級，控制設定按鈕的顯示
   document.getElementById('classDivider').style.display = curYear ? 'inline-block' : 'none';
   cs.style.display = curYear ? 'inline-block' : 'none';
 }
@@ -1098,7 +1023,7 @@ function renderHeaderSelects(){
 document.getElementById('yearSelect').addEventListener('change', e=>{
   db.lastYearId = e.target.value; curYear = db.years[db.lastYearId];
   if(!curYear.lastClassId || !curYear.classes[curYear.lastClassId]) {
-      const cIds = Object.keys(curYear.classes || {});
+      const cIds = Object.keys(curYear.classes);
       curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
   }
   cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
@@ -1116,30 +1041,30 @@ document.getElementById('classSelect').addEventListener('change', e=>{
 });
 
 document.getElementById('newYearBtn').addEventListener('click', ()=>{
-  showPromptModal('新增學年度', '請輸入學年度名稱：', '115學年度', (name) => {
-    const y = blankYear(name ? name.trim() : '新學年度');
-    db.years[y.id] = y; db.lastYearId = y.id;
-    curYear = y; cur = null;
-    saveDB(); renderHeaderSelects(); 
-    if(currentView !== 'dash') switchView('dash'); 
-    else renderDashboard();
-    toast('已建立新學年度');
-  });
+  const name = prompt('新學年度名稱？', '115學年度');
+  if(name===null) return;
+  const y = blankYear(name.trim() || '新學年度');
+  db.years[y.id] = y; db.lastYearId = y.id;
+  curYear = y; cur = null;
+  saveDB(); renderHeaderSelects(); 
+  if(currentView !== 'dash') switchView('dash'); 
+  else renderDashboard();
+  toast('已建立新學年度，請繼續建立班級');
 });
 
 window.dashNewClass = function(yId){
-  showPromptModal('新增班級', '請輸入新班級名稱：', '三年一班', (name) => {
-    const targetYear = db.years[yId];
-    if(!targetYear) return;
-    const cId = uid();
-    targetYear.classes[cId] = blankClass(name ? name.trim() : '新班級');
-    
-    db.lastYearId = yId; curYear = targetYear;
-    curYear.lastClassId = cId; cur = curYear.classes[cId];
-    
-    saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
-  });
-};
+  const name = prompt('新班級名稱？', '三年一班');
+  if(name===null) return;
+  const targetYear = db.years[yId];
+  const cId = uid();
+  targetYear.classes[cId] = blankClass(name.trim() || '新班級');
+  
+  // 若為當下關注的學年，更新 cur 狀態並跳轉
+  db.lastYearId = yId; curYear = targetYear;
+  curYear.lastClassId = cId; cur = curYear.classes[cId];
+  
+  saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
+}
 
 function computeYearStats(year){
   let studentCount=0, classCount=0;
@@ -1151,38 +1076,39 @@ window.dashArchiveYear = function(yId){
   const targetYear = db.years[yId];
   if(!targetYear) return;
   
-  showConfirmModal('封存學年度', `確定要封存「${targetYear.name}」嗎？\n系統會先備份 JSON，隨後將其移出本機資料庫。`, () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ archivedYear: targetYear }, null, 2));
-    const dl = document.createElement('a');
-    dl.href = dataStr; dl.download = `學年封存_${targetYear.name}_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(dl); dl.click(); dl.remove();
+  if(!confirm(`確定要封存「${targetYear.name}」嗎？\n系統會先下載該學年度的備份 JSON，接著會將它從主資料庫移除以節省瀏覽器儲存空間。\n請務必確認 JSON 已下載成功再繼續！`)) return;
 
-    const stats = computeYearStats(targetYear);
-    if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
-    db.archivedYearsMeta.push({ id: targetYear.id, name: targetYear.name, archivedAt: new Date().toLocaleString('zh-TW'), studentCount: stats.studentCount, classCount: stats.classCount });
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ archivedYear: targetYear }, null, 2));
+  const dl = document.createElement('a');
+  dl.href = dataStr; dl.download = `學年封存_${targetYear.name}_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(dl); dl.click(); dl.remove();
 
-    delete db.years[yId];
-    
-    if(db.lastYearId === yId){
-       const remaining = Object.keys(db.years);
-       if(remaining.length > 0){
-           db.lastYearId = remaining[0];
-           curYear = db.years[db.lastYearId];
-           const cIds = Object.keys(curYear.classes);
-           curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
-           cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
-       } else {
-           db.lastYearId = null;
-           curYear = null;
-           cur = null;
-       }
-    }
+  const stats = computeYearStats(targetYear);
+  if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
+  db.archivedYearsMeta.push({ id: targetYear.id, name: targetYear.name, archivedAt: new Date().toLocaleString('zh-TW'), studentCount: stats.studentCount, classCount: stats.classCount });
 
-    saveDB(); renderHeaderSelects(); 
-    if(currentView!=='dash') switchView('dash'); else renderDashboard();
-    toast(`已封存「${targetYear.name}」，JSON 備份已下載`);
-  });
-};
+  delete db.years[yId];
+  
+  // 如果封存的是當前學年，需重置狀態
+  if(db.lastYearId === yId){
+     const remaining = Object.keys(db.years);
+     if(remaining.length > 0){
+         db.lastYearId = remaining[0];
+         curYear = db.years[db.lastYearId];
+         const cIds = Object.keys(curYear.classes);
+         curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
+         cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
+     } else {
+         db.lastYearId = null;
+         curYear = null;
+         cur = null;
+     }
+  }
+
+  saveDB(); renderHeaderSelects(); 
+  if(currentView!=='dash') switchView('dash'); else renderDashboard();
+  toast(`已封存「${targetYear.name}」並移除資料，JSON 備份已下載`);
+}
 
 function renderArchiveList(){
   const wrap = document.getElementById('archiveListWrap');
@@ -1195,10 +1121,9 @@ function renderArchiveList(){
     </div>
   `).join('');
   wrap.querySelectorAll('button[data-i]').forEach(btn=> btn.addEventListener('click', ()=>{
-    showConfirmModal('確認移除', '僅移除封存清單紀錄（不影響已下載檔案），確定嗎？', () => {
-      db.archivedYearsMeta.splice(Number(btn.dataset.i),1);
-      saveDB(); renderArchiveList();
-    });
+    if(!confirm('僅移除封存清單中的紀錄（不會刪除您已下載的備份檔），確定嗎？')) return;
+    db.archivedYearsMeta.splice(Number(btn.dataset.i),1);
+    saveDB(); renderArchiveList();
   }));
 }
 
@@ -1220,8 +1145,12 @@ document.getElementById('restoreArchiveFile').addEventListener('change', e=>{
       db.years[newId] = year;
       if(db.archivedYearsMeta) db.archivedYearsMeta = db.archivedYearsMeta.filter(m=> m.name !== year.name);
       
-      db.lastYearId = newId;
-      saveDB(); refreshActivePointers(); renderHeaderSelects(); renderArchiveList();
+      db.lastYearId = newId; curYear = year;
+      const cIds = Object.keys(curYear.classes);
+      curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
+      cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
+      
+      saveDB(); renderHeaderSelects(); renderArchiveList();
       document.getElementById('archiveListModal').style.display='none';
       switchView('dash');
       toast(`已還原學年度「${year.name}」`);
@@ -1259,17 +1188,15 @@ document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
       const imported = JSON.parse(evt.target.result);
       if(imported && imported.years){
         db = imported;
-        saveDB(true);
-        refreshActivePointers();
-        renderHeaderSelects(); switchView('dash'); modal.style.display = 'none'; toast('成功還原資料！');
-      } else { toast('檔案格式不正確', true); }
-    }catch(err){ toast('讀取檔案失敗', true); }
+        loadDB(); // 復用初始化邏輯以設定狀態
+        saveDB(); renderHeaderSelects(); switchView('dash'); modal.style.display = 'none'; toast('成功還原資料！');
+      } else { toast('檔案格式不正確'); }
+    }catch(err){ toast('讀取檔案失敗'); }
   };
   reader.readAsText(file);
-  e.target.value = '';
 });
 
-/* ============ 跨裝置主資料庫雲端同步修復 ============ */
+/* ============ 跨裝置主資料庫雲端同步 ============ */
 function renderMasterSyncStatus(){
   const el = document.getElementById('masterSyncStatus');
   if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
@@ -1287,12 +1214,6 @@ async function findMasterDBFileId(){
   const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
     headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken })
   });
-  if(res.status === 401){
-    window.accessToken = null;
-    updateSyncWarning();
-    throw new Error('Google 授權已過期，請點擊警告列重新連結');
-  }
-  if(!res.ok) throw new Error(`Google Drive API 錯誤 (HTTP ${res.status})`);
   const data = await res.json();
   if(data.files && data.files.length > 0) return data.files[0].id;
   return null;
@@ -1306,11 +1227,10 @@ async function linkMasterDB(){
       db.masterSync.fileId = fileId;
       saveDB(true);
       renderMasterSyncStatus();
-      toast('已找到並連結現有的雲端主資料庫！');
+      toast('已找到並連結現有的雲端主資料庫！可以選擇上傳或下載。');
     } else {
-      showConfirmModal('建立主資料庫', '雲端尚未找到主資料庫檔案，要使用目前本機資料建立一個新的雲端主資料庫嗎？', async () => {
-        await pushMasterDBToCloud(false, true);
-      });
+      if(!confirm('雲端硬碟裡尚未找到主資料庫檔案，是否要用「目前本機的資料」建立一份新的雲端主資料庫？')) return;
+      await pushMasterDBToCloud(false, true);
     }
   }catch(e){ toast('連結失敗：' + e.message, true); }
 }
@@ -1326,6 +1246,7 @@ async function pushMasterDBToCloud(silent, isCreate){
     }
 
     if(!fileId){
+      // 建立新檔案
       const boundary = '-------314159265358979323846';
       const metadata = { name: MASTER_DB_FILENAME, mimeType: 'application/json' };
       const body =
@@ -1336,17 +1257,16 @@ async function pushMasterDBToCloud(silent, isCreate){
         headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': `multipart/related; boundary=${boundary}` }),
         body
       });
-      if(createRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
       const createData = await createRes.json();
       if(!createData.id) throw new Error('建立雲端檔案失敗');
       fileId = createData.id;
     } else {
+      // 更新既有檔案內容
       const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
         method: 'PATCH',
         headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': 'application/json' }),
         body: content
       });
-      if(updateRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
       if(!updateRes.ok) throw new Error('HTTP ' + updateRes.status);
     }
 
@@ -1354,7 +1274,7 @@ async function pushMasterDBToCloud(silent, isCreate){
     db.masterSync.lastSyncedAt = new Date().toLocaleString('zh-TW');
     saveDB(true);
     renderMasterSyncStatus();
-    if(!silent) toast('已上傳本機資料至雲端主資料庫！');
+    if(!silent) toast('已成功上傳本機資料到雲端主資料庫！');
     return true;
   }catch(e){ if(!silent) toast('上傳失敗：' + e.message, true); return false; }
 }
@@ -1364,30 +1284,25 @@ async function pullMasterDBFromCloud(){
   try{
     let fileId = db.masterSync ? db.masterSync.fileId : null;
     if(!fileId) fileId = await findMasterDBFileId();
-    if(!fileId){ toast('雲端尚未有主資料庫檔案，請先進行一次上傳', true); return; }
+    if(!fileId){ toast('雲端尚未有主資料庫檔案，請先上傳一次'); return; }
 
-    showConfirmModal('確認下載', '確定要從雲端下載資料嗎？這會完全覆蓋本機目前的所有學年度與班級資料。', async () => {
-      try {
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-          headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken })
-        });
-        if(res.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
-        if(!res.ok) throw new Error('HTTP ' + res.status);
-        const remoteDb = await res.json();
-        if(!remoteDb || !remoteDb.years){ toast('雲端檔案格式不正確', true); return; }
+    if(!confirm('確定要從雲端下載資料嗎？這會完全覆蓋本機目前的所有學年度／班級／名單資料，此操作無法復原！')) return;
 
-        remoteDb.masterSync = { fileId, autoSync: (db.masterSync && db.masterSync.autoSync) || false, lastSyncedAt: new Date().toLocaleString('zh-TW') };
-        db = remoteDb;
-        saveDB(true); 
-        refreshActivePointers();
-        renderHeaderSelects();
-        switchView('dash');
-        renderMasterSyncStatus();
-        toast('已成功從雲端載入全站資料！');
-      } catch(err) {
-        toast('下載失敗：' + err.message, true);
-      }
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken })
     });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const remoteDb = await res.json();
+    if(!remoteDb || !remoteDb.years){ toast('雲端檔案格式不正確', true); return; }
+
+    remoteDb.masterSync = { fileId, autoSync: (db.masterSync && db.masterSync.autoSync) || false, lastSyncedAt: new Date().toLocaleString('zh-TW') };
+    db = remoteDb;
+    loadDB();
+    saveDB(true);
+    renderHeaderSelects();
+    switchView('dash');
+    renderMasterSyncStatus();
+    toast('已成功從雲端下載並覆蓋本機資料！');
   }catch(e){ toast('下載失敗：' + e.message, true); }
 }
 
@@ -1407,10 +1322,10 @@ document.getElementById('masterAutoSyncToggle').addEventListener('change', e=>{
   if(!db.masterSync) db.masterSync = { fileId:null, autoSync:false, lastSyncedAt:null };
   db.masterSync.autoSync = e.target.checked;
   saveDB(true);
-  if(e.target.checked && !db.masterSync.fileId) toast('請先點「尋找／連結雲端主資料庫」完成連結');
+  if(e.target.checked && !db.masterSync.fileId) toast('請先點「尋找／建立雲端主資料庫」完成連結');
 });
+/* ============ 跨裝置主資料庫雲端同步結束 ============ */
 
-/* ============ Google Sheets 單一班級成績雙向同步修復 ============ */
 function sanitizeSheetTabName(name){
   let clean = String(name || '').replace(/[:\\\/\?\*\[\]]/g, '_').trim();
   if(!clean) clean = '未命名';
@@ -1444,7 +1359,6 @@ async function linkClassSheet(){
     let sheetId = cur.sheetId;
     if(!sheetId){
       const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
-      if(searchRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
       const searchData = await searchRes.json();
       if(searchData.files && searchData.files.length > 0){
         sheetId = searchData.files[0].id;
@@ -1454,16 +1368,14 @@ async function linkClassSheet(){
           headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': 'application/json' }),
           body: JSON.stringify({ properties: { title: spreadsheetTitle }, sheets: [{ properties: { title: tabName } }] })
         });
-        if(createRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
         const createData = await createRes.json();
         sheetId = createData.spreadsheetId;
       }
     }
 
     const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
-    if(metaRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
     const metaData = await metaRes.json();
-    const sheetExists = metaData.sheets && metaData.sheets.some(s => s.properties.title === tabName);
+    const sheetExists = metaData.sheets.some(s => s.properties.title === tabName);
 
     if(!sheetExists){
       await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
@@ -1474,7 +1386,7 @@ async function linkClassSheet(){
     }
 
     cur.sheetId = sheetId; cur.sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-    saveDB(); renderSheetStatus(); await pushScoresToSheet(true); toast(`已連結工作表：${tabName}`);
+    saveDB(); renderSheetStatus(); await pushScoresToSheet(true); toast(`成功建立／連結工作表：${tabName}`);
   }catch(e){ toast('連結失敗：' + e.message, true); }
 }
 
@@ -1526,30 +1438,27 @@ document.getElementById('historyLogCloseBtn').addEventListener('click', ()=>{ do
 
 document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
   const stuId = window.historyModalStuId; if(!stuId) return;
-  showPromptModal('新增分數紀錄', '請輸入加分數值（可用負數代表扣分）：', '1', (deltaStr) => {
-    const delta = Number(deltaStr);
-    if(isNaN(delta) || delta===0){ toast('請輸入有效的非零數字', true); return; }
-    showPromptModal('輸入原因', '請輸入原因（選填）：', '', (reason) => {
-      const sc = getStudentScoreObj(stuId);
-      sc.plusScore += delta;
-      logScoreChange(stuId, delta, reason || '');
-      saveDB(); renderHistoryLog();
-      if(currentView==='score') renderScoreSeats();
-      toast('已新增加扣分紀錄');
-    });
-  });
+  const deltaStr = prompt('請輸入加分數值（可用負數代表扣分）：', '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0){ toast('請輸入有效的非零數字'); return; }
+  const reason = prompt('請輸入原因（選填）：', '') || '';
+  const sc = getStudentScoreObj(stuId);
+  sc.plusScore += delta;
+  logScoreChange(stuId, delta, reason);
+  saveDB(); renderHistoryLog();
+  if(currentView==='score') renderScoreSeats();
+  toast('已新增一筆紀錄');
 });
 
 async function pushScoresToSheet(silent, forceDate){
-  if(!cur || !cur.sheetId){ if(!silent) toast('請先連結試算表', true); return; }
+  if(!cur || !cur.sheetId){ if(!silent) toast('請先連結試算表'); return; }
   if(!window.accessToken){ if(!silent) window.requireAuth('pushSheet'); return; }
   try{
     const tabName = getTargetSheetTabName();
-    const encodedRange = encodeURIComponent(`'${tabName}'!A1:Z2000`);
     let existingRows = [];
     try{
-      const getRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodedRange}`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
-      if(getRes.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
+      const getRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1:Z2000`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
       const getData = await getRes.json();
       existingRows = getData.values || [];
     }catch(err){}
@@ -1615,87 +1524,82 @@ async function pushScoresToSheet(silent, forceDate){
       newRows.push(rowArr);
     });
 
-    const putRange = encodeURIComponent(`'${tabName}'!A1`);
-    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${putRange}?valueInputOption=RAW`, {
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1?valueInputOption=RAW`, {
       method: 'PUT',
       headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken, 'Content-Type': 'application/json' }),
       body: JSON.stringify({ values: newRows })
     });
-    if(res.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
     if(!res.ok) throw new Error('HTTP ' + res.status);
-    if(!silent) toast(`已更新「${dateStr}」分數至試算表！`);
+    if(!silent) toast(`已更新「${dateStr}」這一欄的加分紀錄至雲端！`);
     return true;
   }catch(e){ if(!silent) toast('推送失敗：' + e.message, true); return false; }
 }
 
 async function pullScoresFromSheet(){
-  if(!cur || !cur.sheetId){ toast('請先連結試算表', true); return; }
+  if(!cur || !cur.sheetId){ toast('請先連結試算表'); return; }
   if(!window.accessToken){ window.requireAuth('pullSheet'); return; }
-  showConfirmModal('拉回分數', '確定從雲端試算表拉回最新資料嗎？這會更新目前的加分與總分。', async () => {
-    try{
-      const tabName = getTargetSheetTabName();
-      const encodedRange = encodeURIComponent(`'${tabName}'!A1:Z2000`);
-      const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodedRange}`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
-      if(res.status === 401){ window.accessToken = null; updateSyncWarning(); throw new Error('授權已過期'); }
-      const data = await res.json();
-      const rows = data.values || [];
-      if(rows.length <= 1){ toast('工作表內沒有學生資料', true); return; }
+  if(!confirm('確定從雲端工作表拉回最新資料嗎？（會覆蓋目前的今日加分與總分）')) return;
+  try{
+    const tabName = getTargetSheetTabName();
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cur.sheetId}/values/${encodeURIComponent(tabName)}!A1:Z2000`, { headers: new Headers({ 'Authorization': 'Bearer ' + window.accessToken }) });
+    const data = await res.json();
+    const rows = data.values || [];
+    if(rows.length <= 1){ toast('工作表內沒有資料'); return; }
 
-      const header = rows[0];
-      const idIdx = header.indexOf('學生ID');
-      const seatIdx = header.indexOf('座號');
-      const nameIdx = header.indexOf('姓名');
-      const scoreIdx = header.indexOf('分數');
-      const totalPlusIdx = header.indexOf('累計加分');
-      const totalMinusIdx = header.indexOf('累計扣分');
-      const timeIdx = header.indexOf('最近更新時間');
-      const todayDateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
-      const todayPlusIdx = header.indexOf(`${todayDateStr} 加分`);
-      const gradeCols = header.map((h,i)=>({h,i})).filter(o=> / 作品分$/.test(o.h));
-      const evalIdx = gradeCols.length ? gradeCols[gradeCols.length-1].i : -1;
+    const header = rows[0];
+    const idIdx = header.indexOf('學生ID');
+    const seatIdx = header.indexOf('座號');
+    const nameIdx = header.indexOf('姓名');
+    const scoreIdx = header.indexOf('分數');
+    const totalPlusIdx = header.indexOf('累計加分');
+    const totalMinusIdx = header.indexOf('累計扣分');
+    const timeIdx = header.indexOf('最近更新時間');
+    const todayDateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace(/\//g,'-');
+    const todayPlusIdx = header.indexOf(`${todayDateStr} 加分`);
+    const gradeCols = header.map((h,i)=>({h,i})).filter(o=> / 作品分$/.test(o.h));
+    const evalIdx = gradeCols.length ? gradeCols[gradeCols.length-1].i : -1;
 
-      let updated = 0;
-      for(let i=1; i<rows.length; i++){
-        const r = rows[i];
-        const sid = idIdx>-1 ? String(r[idIdx]||'').trim() : '';
-        const seatNo = seatIdx>-1 ? r[seatIdx] : r[0];
-        const name = nameIdx>-1 ? r[nameIdx] : r[1];
-        if(!name && !sid) continue;
+    let updated = 0;
+    for(let i=1; i<rows.length; i++){
+      const r = rows[i];
+      const sid = idIdx>-1 ? String(r[idIdx]||'').trim() : '';
+      const seatNo = seatIdx>-1 ? r[seatIdx] : r[0];
+      const name = nameIdx>-1 ? r[nameIdx] : r[1];
+      if(!name && !sid) continue;
 
-        let s = sid ? allStudents().find(x=>x.id===sid) : null;
-        if(!s) s = allStudents().find(x=>x.name===String(name||'').trim() || (seatNo && x.seatNo===String(seatNo).trim()));
-        if(s){
-          if(seatNo) s.seatNo = String(seatNo).trim();
-          if(scoreIdx>-1 && r[scoreIdx]!==undefined && r[scoreIdx]!=='') {
-              let num = Number(r[scoreIdx]);
-              s.score = isNaN(num) ? null : num;
-          }
-
-          const sc = getStudentScoreObj(s.id);
-          if(todayPlusIdx>-1 && r[todayPlusIdx]!==undefined && r[todayPlusIdx]!==''){
-            const v = Number(r[todayPlusIdx]);
-            if(!isNaN(v)) sc.plusScore = v;
-          }
-          if(totalPlusIdx>-1 && totalMinusIdx>-1){
-            sc.totalPlusLifetime = Number(r[totalPlusIdx]) || 0;
-            sc.totalMinusLifetime = Number(r[totalMinusIdx]) || 0;
-          }
-          if(evalIdx>-1 && r[evalIdx]){
-            const valStr = String(r[evalIdx]).trim();
-            const lastChar = valStr.slice(-1);
-            if(['+','-'].includes(lastChar)){ sc.projectGrade = valStr.slice(0, -1); sc.projectModifier = lastChar; } 
-            else { sc.projectGrade = valStr; sc.projectModifier = '無'; }
-          }
-          if(timeIdx>-1 && r[timeIdx]) sc.lastUpdated = r[timeIdx];
-          updated++;
+      let s = sid ? allStudents().find(x=>x.id===sid) : null;
+      if(!s) s = allStudents().find(x=>x.name===String(name||'').trim() || (seatNo && x.seatNo===String(seatNo).trim()));
+      if(s){
+        if(seatNo) s.seatNo = String(seatNo).trim();
+        if(scoreIdx>-1 && r[scoreIdx]!==undefined && r[scoreIdx]!=='') {
+            let num = Number(r[scoreIdx]);
+            s.score = isNaN(num) ? null : num;
         }
+
+        const sc = getStudentScoreObj(s.id);
+        if(todayPlusIdx>-1 && r[todayPlusIdx]!==undefined && r[todayPlusIdx]!==''){
+          const v = Number(r[todayPlusIdx]);
+          if(!isNaN(v)) sc.plusScore = v;
+        }
+        if(totalPlusIdx>-1 && totalMinusIdx>-1){
+          sc.totalPlusLifetime = Number(r[totalPlusIdx]) || 0;
+          sc.totalMinusLifetime = Number(r[totalMinusIdx]) || 0;
+        }
+        if(evalIdx>-1 && r[evalIdx]){
+          const valStr = String(r[evalIdx]).trim();
+          const lastChar = valStr.slice(-1);
+          if(['+','-'].includes(lastChar)){ sc.projectGrade = valStr.slice(0, -1); sc.projectModifier = lastChar; } 
+          else { sc.projectGrade = valStr; sc.projectModifier = '無'; }
+        }
+        if(timeIdx>-1 && r[timeIdx]) sc.lastUpdated = r[timeIdx];
+        updated++;
       }
-      saveDB(); 
-      if(currentView === 'score') renderScoreClassroom();
-      else if(currentView === 'config') renderConfigClassroom();
-      toast(`已成功從試算表載入 ${updated} 位學生分數！`);
-    }catch(e){ toast('拉回失敗：' + e.message, true); }
-  });
+    }
+    saveDB(); 
+    if(currentView === 'score') renderScoreClassroom();
+    else if(currentView === 'config') renderConfigClassroom();
+    toast(`已從工作表拉回 ${updated} 位學生資料`);
+  }catch(e){ toast('拉回失敗：' + e.message, true); }
 }
 
 function debouncedAutoPush(){
@@ -1740,7 +1644,7 @@ document.getElementById('loadRosterBtn').addEventListener('click', ()=>{
   if(!cur) return;
   const b = parseRoster(document.getElementById('boysInput').value,'M');
   const g = parseRoster(document.getElementById('girlsInput').value,'F');
-  if(b.length===0 && g.length===0){ toast('請先貼上名單', true); return; }
+  if(b.length===0 && g.length===0){ toast('請先貼上名單'); return; }
   cur.boys = cur.boys.concat(b); cur.girls = cur.girls.concat(g);
   document.getElementById('boysInput').value=''; document.getElementById('girlsInput').value='';
   saveDB(); renderRosterTables(); renderConstraintSelects(); toast(`已載入 ${b.length+g.length} 位學生`);
@@ -1754,7 +1658,7 @@ document.getElementById('importFileInput').addEventListener('change', e=>{
     try{
       const wb = XLSX.read(evt.target.result, {type:'binary'});
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-      if(!rows || rows.length===0){ toast('檔案是空的', true); return; }
+      if(!rows || rows.length===0){ toast('檔案是空的'); return; }
       const hRow = (rows[0]||[]).map(h=>String(h||'').trim());
       const dataRows = hRow.some(h=>h.includes('座號')||h.includes('姓名')) ? rows.slice(1) : rows;
       
@@ -1852,9 +1756,9 @@ document.getElementById('addConstraintBtn').addEventListener('click', ()=>{
   if(!cur) return;
   const a = document.getElementById('constraintA').value;
   const b = document.getElementById('constraintB').value;
-  if(!a || !b || a===b){ toast('請選擇兩位不同的學生', true); return; }
+  if(!a || !b || a===b){ toast('請選擇兩位不同的學生'); return; }
   const exists = cur.constraints.some(p=>(p[0]===a&&p[1]===b)||(p[0]===b&&p[1]===a));
-  if(exists){ toast('這條限制已經存在', true); return; }
+  if(exists){ toast('這條限制已經存在'); return; }
   cur.constraints.push([a,b]);
   saveDB(); renderConstraintChips();
 });
@@ -1974,7 +1878,7 @@ function repairConstraints(groups){
 document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
   if(!cur) return;
   const students = allStudents();
-  if(students.length===0){ toast('請先載入學生名單', true); return; }
+  if(students.length===0){ toast('請先載入學生名單'); return; }
   const caps = computeCapacities(students.length, cur.groupConfig.sizeMode, cur.groupConfig.value);
   let groups;
   const algo = cur.groupConfig.algo;
@@ -2042,11 +1946,11 @@ document.getElementById('podDeskLayoutSelect').addEventListener('change', e=>{ i
 document.getElementById('podFacingSelect').addEventListener('change', e=>{ if(cur){ cur.seatConfig.podFacing = e.target.value; saveDB(); }});
 
 document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
-  if(!cur || !cur.groups){ toast('請先產生分組', true); return; }
+  if(!cur || !cur.groups){ toast('請先產生分組'); return; }
   if(cur.seatConfig.layoutMode === 'grid'){
     const total = cur.seatConfig.rows * cur.seatConfig.cols;
     const students = cur.groups.flatMap(g => g.members.map(id => ({id, groupId:g.id})));
-    if(students.length>total){ toast(`座位數(${total})小於學生數(${students.length})，請增加排或行`, true); return; }
+    if(students.length>total){ toast(`座位數(${total})小於學生數(${students.length})，請增加排或行`); return; }
     const seats = new Array(total).fill(null);
     let idx=0;
     for(const stu of students){ seats[idx]=stu; idx++; }
@@ -2055,7 +1959,7 @@ document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
     const desksPerPod = cur.seatConfig.podDeskLayout.split('x').reduce((a,b)=>a*Number(b), 1);
     const maxGroupSize = Math.max(0, ...cur.groups.map(g=>g.members.length));
     if(maxGroupSize > desksPerPod){
-      toast(`⚠️ 有分組人數(${maxGroupSize}人)超過島嶼內部桌次(${desksPerPod}人)，請調整桌面設定`, true);
+      toast(`⚠️ 有分組人數(${maxGroupSize}人)超過島嶼內部桌次(${desksPerPod}人)，請調整「內部桌次」設定或重新分組`, true);
       return;
     }
     cur.seats = cur.groups.map(g=>{
@@ -2252,6 +2156,7 @@ document.getElementById('scoreBrushBtns').addEventListener('click', handleBrushC
 const configBrushBtns = document.getElementById('configBrushBtns');
 if(configBrushBtns) configBrushBtns.addEventListener('click', handleBrushClick);
 
+// 座位批次操作
 function setBatchMode(on){
   window.batchMode = on;
   if(!on) window.selectedIds.clear();
@@ -2276,8 +2181,8 @@ function clearBatchSelection(){ window.selectedIds.clear(); updateBatchToolbar()
 
 function batchApplyBrush(){
   if(!cur) return;
-  if(window.selectedIds.size===0){ toast('請先勾選學生', true); return; }
-  if(window.activeBrushRole===''){ toast('請先選擇角色刷子', true); return; }
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
+  if(window.activeBrushRole===''){ toast('請先選擇角色刷子'); return; }
   window.selectedIds.forEach(id=>{
     if(!cur.studentRoles[id]) cur.studentRoles[id]=[];
     if(window.activeBrushRole==='ERASER'){ cur.studentRoles[id]=[]; }
@@ -2290,7 +2195,7 @@ function batchApplyBrush(){
 }
 function batchClearRole(){
   if(!cur) return;
-  if(window.selectedIds.size===0){ toast('請先勾選學生', true); return; }
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
   window.selectedIds.forEach(id=>{ cur.studentRoles[id]=[]; });
   saveDB();
   if(currentView==='config') renderConfigSeats(); else if(currentView==='score') renderScoreSeats();
@@ -2298,20 +2203,19 @@ function batchClearRole(){
 }
 function batchAdjustScore(){
   if(!cur) return;
-  if(window.selectedIds.size===0){ toast('請先勾選學生', true); return; }
+  if(window.selectedIds.size===0){ toast('請先勾選學生'); return; }
   const n = window.selectedIds.size;
-  showPromptModal('批次加分', `要為選取的 ${n} 位學生加減多少分？`, '1', (deltaStr) => {
-    const delta = Number(deltaStr);
-    if(isNaN(delta) || delta===0){ toast('請輸入有效數字', true); return; }
-    showPromptModal('輸入原因', '原因（選填）：', '', (reason) => {
-      window.selectedIds.forEach(id=>{
-        const sc = getStudentScoreObj(id);
-        sc.plusScore += delta;
-        logScoreChange(id, delta, reason || '');
-      });
-      saveDB(); renderScoreSeats(); toast(`已為 ${n} 位學生加減分`);
-    });
+  const deltaStr = prompt(`要為選取的 ${n} 位學生加減多少分？`, '1');
+  if(deltaStr===null) return;
+  const delta = Number(deltaStr);
+  if(isNaN(delta) || delta===0){ toast('請輸入有效數字'); return; }
+  const reason = prompt('原因（選填）：', '') || '';
+  window.selectedIds.forEach(id=>{
+    const sc = getStudentScoreObj(id);
+    sc.plusScore += delta;
+    logScoreChange(id, delta, reason);
   });
+  saveDB(); renderScoreSeats(); toast(`已為 ${n} 位學生加減分`);
 }
 
 const configBatchModeToggle = document.getElementById('configBatchModeToggle');
@@ -2329,15 +2233,15 @@ document.getElementById('scoreBatchClearSel')?.addEventListener('click', clearBa
 document.getElementById('addJobBtn').addEventListener('click', ()=>{
   if(!cur) return;
   const val = document.getElementById('newJobInput').value.trim();
-  if(!val){ toast('請輸入角色名稱', true); return; }
+  if(!val){ toast('請輸入角色名稱'); return; }
   if(!cur.jobsList) cur.jobsList = [];
-  if(cur.jobsList.includes(val)){ toast('角色已存在', true); return; }
+  if(cur.jobsList.includes(val)){ toast('角色已存在'); return; }
   cur.jobsList.push(val); document.getElementById('newJobInput').value='';
   saveDB(); renderJobChips(); renderBrushButtons(); toast('已新增角色');
 });
 
 document.getElementById('exportJpgBtn').addEventListener('click', async ()=>{
-  if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
+  if(!cur || !cur.seats){ toast('請先排入座位'); return; }
   const captureArea = document.getElementById('scoreViewCaptureArea');
   try{
     const canvas = await html2canvas(captureArea, {backgroundColor:'#FFFFFF', scale:2});
@@ -2349,7 +2253,7 @@ document.getElementById('exportJpgBtn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
-  if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
+  if(!cur || !cur.seats){ toast('請先排入座位'); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
     const aoa = [['座號','姓名','工作角色','性別','分數',`${dateStr} 今日加分`,`${dateStr} 今日作品分`,'累計加分','累計扣分','總分','最近更新時間']];
@@ -2391,8 +2295,8 @@ function renderConfigClassroom(){
   updateBatchToolbar();
 }
 
-// 啟動頁面
-loadDBFromStorage(); 
+// 啟動程式
+loadDB(); 
 renderHeaderSelects(); 
 switchView('dash');
 
