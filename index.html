@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統 (Firebase 雲端全功能版)</title>
+<title>分組座位與即時計分系統 (全功能修復完整版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -11,144 +11,160 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
-:root{
-  --paper:#FBF7EF; --paper-deep:#F3ECDD; --ink:#3A3532; --ink-soft:#7A7168;
-  --line:#E4DAC6; --coral:#E8927C; --coral-deep:#D97A62; --pink:#F6C9CE;
-  --mint:#BFE3D0; --sky:#BFDCEB; --butter:#F5DDA0; --lilac:#D9C9F0;
-  --peach:#F9D8B4; --white:#FFFFFF; --radius:16px;
-  --shadow:0 2px 0 var(--line), 0 10px 24px -14px rgba(58,53,50,0.28);
+:root {
+  --paper: #FBF7EF;
+  --paper-deep: #F3ECDD;
+  --ink: #3A3532;
+  --ink-soft: #7A7168;
+  --line: #E4DAC6;
+  --coral: #E8927C;
+  --coral-deep: #D97A62;
+  --pink: #F6C9CE;
+  --mint: #BFE3D0;
+  --sky: #BFDCEB;
+  --butter: #F5DDA0;
+  --lilac: #D9C9F0;
+  --peach: #F9D8B4;
+  --white: #FFFFFF;
+  --radius: 16px;
+  --shadow: 0 2px 0 var(--line), 0 10px 24px -14px rgba(58,53,50,0.28);
 }
-*{box-sizing:border-box;}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans TC',sans-serif;line-height:1.7;}
-h1,h2,h3,h4{font-family:'Noto Sans TC',sans-serif;font-weight:900;margin:0;}
-.num{font-family:'Baloo 2',sans-serif;}
-button{font-family:inherit;cursor:pointer;}
-input,select,textarea{font-family:inherit;}
-:focus-visible{outline:3px solid var(--coral-deep);outline-offset:2px;}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC',sans-serif; line-height:1.7; }
+h1,h2,h3,h4 { font-family:'Noto Sans TC',sans-serif; font-weight:900; margin:0; }
+.num { font-family:'Baloo 2',sans-serif; }
+button { font-family:inherit; cursor:pointer; }
+input,select,textarea { font-family:inherit; }
+:focus-visible { outline:3px solid var(--coral-deep); outline-offset:2px; }
 
-.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(1rem,3vw,2.4rem) 6rem;}
+.wrap { max-width:1180px; margin:0 auto; padding:0 clamp(1rem,3vw,2.4rem) 6rem; }
 
-header.top{ position:sticky;top:0;z-index:30; background:var(--paper); border-bottom:2px dashed var(--line); }
-.top-inner{max-width:1180px;margin:0 auto;padding:1rem clamp(1rem,3vw,2.4rem); display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
-.brand{display:flex;align-items:center;gap:0.6rem;font-weight:900;font-size:1.25rem;cursor:pointer;}
-.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--coral);}
-.class-bar{display:flex;align-items:center;gap:0.6rem;margin-left:auto;flex-wrap:wrap;}
-.bar-divider{width:1px;height:22px;background:var(--line);display:inline-block;}
-select{ padding:0.5rem 0.8rem;border-radius:999px;border:2px solid var(--line); background:var(--white);color:var(--ink); }
-select:disabled { background: var(--paper-deep); color: var(--ink-soft); cursor: not-allowed; }
-.pill-btn{ padding:0.5rem 1rem;border-radius:999px;border:2px solid var(--ink); background:var(--white);color:var(--ink);font-weight:700;font-size:0.85rem; transition:transform .15s ease, background .2s ease; display:inline-flex;align-items:center;justify-content:center;gap:0.3rem; }
-.pill-btn:hover{transform:translateY(-2px);}
-.pill-btn:disabled{ opacity:0.5; pointer-events:none; }
-.pill-btn.primary{background:var(--coral);border-color:var(--coral-deep);color:var(--white);}
-.pill-btn.danger{background:var(--white);border-color:#c9564a;color:#c9564a;}
-.pill-btn.small{padding:0.35rem 0.75rem;font-size:0.78rem;}
+header.top { position:sticky; top:0; z-index:30; background:var(--paper); border-bottom:2px dashed var(--line); }
+.top-inner { max-width:1180px; margin:0 auto; padding:1rem clamp(1rem,3vw,2.4rem); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.brand { display:flex; align-items:center; gap:0.6rem; font-weight:900; font-size:1.25rem; cursor:pointer; }
+.brand .dot { width:12px; height:12px; border-radius:50%; background:var(--coral); }
+.class-bar { display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-wrap:wrap; }
+.bar-divider { width:1px; height:22px; background:var(--line); display:inline-block; }
+select { padding:0.5rem 0.8rem; border-radius:999px; border:2px solid var(--line); background:var(--white); color:var(--ink); }
+select:disabled { background:var(--paper-deep); color:var(--ink-soft); cursor:not-allowed; }
+.pill-btn { padding:0.5rem 1rem; border-radius:999px; border:2px solid var(--ink); background:var(--white); color:var(--ink); font-weight:700; font-size:0.85rem; transition:transform .15s ease, background .2s ease; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; }
+.pill-btn:hover { transform:translateY(-2px); }
+.pill-btn:disabled { opacity:0.5; pointer-events:none; }
+.pill-btn.primary { background:var(--coral); border-color:var(--coral-deep); color:var(--white); }
+.pill-btn.danger { background:var(--white); border-color:#c9564a; color:#c9564a; }
+.pill-btn.small { padding:0.35rem 0.75rem; font-size:0.78rem; }
 
-.sync-status-badge{ display:inline-flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:2px solid transparent;}
-.sync-status-badge.connected{ background:var(--mint); color:#144A29; border-color:#144A29; }
-.sync-status-badge.syncing{ background:var(--butter); color:#7A5200; border-color:#7A5200; }
-.sync-status-badge.error{ background:#F6C9CE; color:#8A3B4D; border-color:#8A3B4D; }
+.sync-status-badge { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.8rem; border-radius:999px; font-size:0.8rem; font-weight:700; border:2px solid transparent; cursor:pointer; }
+.sync-status-badge.connected { background:var(--mint); color:#144A29; border-color:#144A29; }
+.sync-status-badge.syncing { background:var(--butter); color:#7A5200; border-color:#7A5200; }
+.sync-status-badge.error { background:#F6C9CE; color:#8A3B4D; border-color:#8A3B4D; }
+.sync-status-badge.local { background:#E2E8F0; color:#334155; border-color:#64748B; }
 
-.modal-overlay{ position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center;z-index:1000;display:none; padding:1rem;overflow-y:auto; }
-.modal-box{ background:var(--white);border:3px solid var(--ink);border-radius:var(--radius); padding:2rem;width:100%;max-width:580px;box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh;overflow-y:auto; }
-.modal-box h3{margin-bottom:1rem;font-size:1.2rem;}
-.modal-box p{font-size:0.88rem;color:var(--ink-soft);margin-bottom:1rem;line-height:1.6;}
-.modal-btns{display:flex;gap:0.8rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap;}
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; display:none; padding:1rem; overflow-y:auto; }
+.modal-box { background:var(--white); border:3px solid var(--ink); border-radius:var(--radius); padding:2rem; width:100%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin-bottom:1rem; font-size:1.2rem; }
+.modal-box p { font-size:0.88rem; color:var(--ink-soft); margin-bottom:1rem; line-height:1.6; }
+.modal-btns { display:flex; gap:0.8rem; justify-content:flex-end; margin-top:1.5rem; flex-wrap:wrap; }
 
 .dashboard-view { display:block; }
 .classroom-config-view { display:none; }
 .classroom-score-view { display:none; }
 
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
-.year-section { margin-bottom: 3rem; background: var(--paper-deep); padding: 1.5rem; border-radius: 20px; border: 2px dashed var(--line); }
-.year-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem; }
-.year-header h2 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.2rem; }
+.year-section { margin-bottom:3rem; background:var(--paper-deep); padding:1.5rem; border-radius:20px; border:2px dashed var(--line); }
+.year-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; gap:1rem; }
+.year-header h2 { font-size:1.4rem; display:flex; align-items:center; gap:0.5rem; }
 
-.class-overview-card { position: relative; background: var(--white); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); transition: transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
-.class-overview-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
-.card-content { padding: 1.2rem; cursor: pointer; flex: 1; }
-.class-overview-card h3 { font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--ink); }
-.class-overview-card .meta { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.8rem; }
+.class-overview-card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:12px; box-shadow:var(--shadow); transition:transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
+.class-overview-card:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.15); }
+.card-content { padding:1.2rem; cursor:pointer; flex:1; }
+.class-overview-card h3 { font-size:1.1rem; margin-bottom:0.4rem; color:var(--ink); }
+.class-overview-card .meta { font-size:0.8rem; color:var(--ink-soft); margin-bottom:0.8rem; }
 
-.card{ position:relative; background:var(--white); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.8rem clamp(1.1rem,3vw,2.2rem) 2rem; margin-top:2.6rem; }
-.tape{ position:absolute;top:-14px;left:32px; width:86px;height:26px; background:repeating-linear-gradient(45deg, var(--tape-color,var(--butter)), var(--tape-color,var(--butter)) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px); transform:rotate(-4deg); border:1px solid rgba(58,53,50,0.15); opacity:0.92; }
-.step-head{display:flex;align-items:center;gap:0.9rem;margin-bottom:1.4rem;flex-wrap:wrap;}
-.step-badge{ width:38px;height:38px;border-radius:50%; border:2px solid var(--ink); display:flex;align-items:center;justify-content:center; font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.05rem; background:var(--badge-color,var(--pink)); flex-shrink:0; }
+.card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.8rem clamp(1.1rem,3vw,2.2rem) 2rem; margin-top:2.6rem; }
+.tape { position:absolute; top:-14px; left:32px; width:86px; height:26px; background:repeating-linear-gradient(45deg, var(--tape-color,var(--butter)), var(--tape-color,var(--butter)) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px); transform:rotate(-4deg); border:1px solid rgba(58,53,50,0.15); opacity:0.92; }
+.step-head { display:flex; align-items:center; gap:0.9rem; margin-bottom:1.4rem; flex-wrap:wrap; }
+.step-badge { width:38px; height:38px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.05rem; background:var(--badge-color,var(--pink)); flex-shrink:0; }
 
-.hero{padding:2.4rem 0 1rem;}
-.hero .kicker{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;color:var(--coral-deep);}
-.hero h1{font-size:clamp(1.8rem,4.2vw,2.6rem);margin-top:0.4rem;line-height:1.3;}
-.hero p{margin-top:0.6rem;color:var(--ink-soft);max-width:65ch;}
+.hero { padding:2.4rem 0 1rem; }
+.hero .kicker { font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.85rem; letter-spacing:0.1em; color:var(--coral-deep); }
+.hero h1 { font-size:clamp(1.8rem,4.2vw,2.6rem); margin-top:0.4rem; line-height:1.3; }
+.hero p { margin-top:0.6rem; color:var(--ink-soft); max-width:65ch; }
 
-.field{margin-bottom:1.1rem;}
-.field label{display:block;font-size:0.82rem;font-weight:700;margin-bottom:0.35rem;color:var(--ink-soft);}
-textarea,.text-input{ width:100%;padding:0.7rem 0.9rem;border:2px solid var(--line);border-radius:10px; background:var(--paper);color:var(--ink);font-size:0.9rem;resize:vertical; }
-textarea{min-height:110px;}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+.field { margin-bottom:1.1rem; }
+.field label { display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--ink-soft); }
+textarea, .text-input { width:100%; padding:0.7rem 0.9rem; border:2px solid var(--line); border-radius:10px; background:var(--paper); color:var(--ink); font-size:0.9rem; resize:vertical; }
+textarea { min-height:110px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
 
-.stepper{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:999px;overflow:hidden;}
-.stepper button{width:34px;height:34px;background:var(--paper-deep);border:none;font-size:1.1rem;font-weight:700;}
-.stepper button:hover{background:var(--butter);}
-.stepper .val{width:44px;text-align:center;font-family:'Baloo 2',sans-serif;font-weight:700;}
-.stepper-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.9rem;}
-.stepper-row .label{font-size:0.85rem;font-weight:700;min-width:6.2em;}
+.stepper { display:inline-flex; align-items:center; border:2px solid var(--ink); border-radius:999px; overflow:hidden; }
+.stepper button { width:34px; height:34px; background:var(--paper-deep); border:none; font-size:1.1rem; font-weight:700; }
+.stepper button:hover { background:var(--butter); }
+.stepper .val { width:44px; text-align:center; font-family:'Baloo 2',sans-serif; font-weight:700; }
+.stepper-row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.9rem; }
+.stepper-row .label { font-size:0.85rem; font-weight:700; min-width:6.2em; }
 
-.toggle-group{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;}
-.toggle-group button{ padding:0.5rem 1rem;border-radius:10px;border:2px solid var(--line); background:var(--paper);font-size:0.82rem;font-weight:700;color:var(--ink-soft); }
-.toggle-group button.active{border-color:var(--ink);background:var(--pink);color:var(--ink);}
+.toggle-group { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+.toggle-group button { padding:0.5rem 1rem; border-radius:10px; border:2px solid var(--line); background:var(--paper); font-size:0.82rem; font-weight:700; color:var(--ink-soft); }
+.toggle-group button.active { border-color:var(--ink); background:var(--pink); color:var(--ink); }
 
-.roster-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
-table.roster{width:100%;border-collapse:collapse;font-size:0.85rem;}
-table.roster th{ text-align:left;font-size:0.72rem;color:var(--ink-soft);padding:0.4rem 0.5rem;border-bottom:2px solid var(--ink); }
-table.roster td{padding:0.35rem 0.5rem;border-bottom:1px dashed var(--line);}
-table.roster td[contenteditable]{outline:none;border-radius:6px;}
-table.roster td[contenteditable]:focus{background:var(--paper-deep);}
-table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-weight:900;padding:0 0.3rem; }
+.roster-cols { display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
+table.roster { width:100%; border-collapse:collapse; font-size:0.85rem; }
+table.roster th { text-align:left; font-size:0.72rem; color:var(--ink-soft); padding:0.4rem 0.5rem; border-bottom:2px solid var(--ink); }
+table.roster td { padding:0.35rem 0.5rem; border-bottom:1px dashed var(--line); }
+table.roster td[contenteditable] { outline:none; border-radius:6px; }
+table.roster td[contenteditable]:focus { background:var(--paper-deep); }
+table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; font-weight:900; padding:0 0.3rem; }
 
-.classroom-title-banner{ text-align:center;font-size:1.1rem;font-weight:900;color:var(--ink); margin-bottom:0.8rem; }
-.board-label{ text-align:center;font-size:0.85rem;font-weight:900;color:var(--ink); background:var(--butter);border:2px solid var(--ink);border-radius:8px; padding:0.5rem 1rem;margin:0 auto 1.2rem;max-width:300px;letter-spacing:0.2em; }
-.seat-grid-container{ overflow-x:auto;padding:1rem 0.5rem; }
-.seat-grid{display:grid;gap:0.7rem;justify-content:center;}
+.classroom-title-banner { text-align:center; font-size:1.1rem; font-weight:900; color:var(--ink); margin-bottom:0.8rem; }
+.board-label { text-align:center; font-size:0.85rem; font-weight:900; color:var(--ink); background:var(--butter); border:2px solid var(--ink); border-radius:8px; padding:0.5rem 1rem; margin:0 auto 1.2rem; max-width:300px; letter-spacing:0.2em; }
+.seat-grid-container { overflow-x:auto; padding:1rem 0.5rem; }
+.seat-grid { display:grid; gap:0.7rem; justify-content:center; }
 
-.seat{ width:148px;min-height:138px;border-radius:12px;border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem;font-size:0.75rem; display:flex;flex-direction:column;justify-content:space-between; user-select:none;transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow: hidden; cursor:grab; }
-.seat:active{ cursor:grabbing; }
-.seat:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
-.seat.gender-m { background: #25374C; color: #FFFFFF; border: 2px solid #142232; }
-.seat.gender-m .group-tag { background: rgba(0,0,0,0.4); color: #F5DDA0; }
-.seat.gender-m select, .seat.gender-m button.score-btn { background: #142232; color: #fff; border: 1px solid rgba(255,255,255,0.3); }
-.seat.gender-f { background: #FFF0F3; color: var(--ink); border: 2px solid #E295A8; }
-.seat.gender-f .group-tag { background: rgba(226,149,168,0.25); color: #8A3B4D; }
-.seat.gender-f select, .seat.gender-f button.score-btn { background: #fff; color: var(--ink); border: 1px solid #E295A8; }
-.seat .group-tag { font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block; white-space: nowrap; width: fit-content; }
-.seat .role-badges-wrap { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 90%; pointer-events: none; }
-.seat .role-badge { font-size: 0.58rem; font-weight: 900; background: var(--coral-deep); color: #FFF; padding: 1px 4px; border-radius: 4px; line-height: 1.2; white-space: nowrap; }
-.seat-top-row { display:flex; justify-content:space-between; align-items:center; width:100%; gap: 4px; overflow: hidden; margin-bottom: 2px; }
-.seat-name { font-weight:800; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex: 1; text-align: left; }
-.seat-no { font-size:0.65rem; white-space: nowrap; flex-shrink: 0; }
-.score-control-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.08); border-radius: 6px; padding: 2px 4px; font-size: 0.72rem; margin-top: 2px; }
-.score-control-btns { display: flex; gap: 1px; }
-.score-btn { width: 20px; height: 20px; font-size: 0.7rem; font-weight: bold; border-radius: 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; }
-.seat.empty{ background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
-.seat.drag-over{ transform:scale(1.05); outline:3px dashed var(--coral-deep); z-index:10; }
+.seat { width:148px; min-height:138px; border-radius:12px; border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem; font-size:0.75rem; display:flex; flex-direction:column; justify-space-between; user-select:none; transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow:hidden; cursor:grab; }
+.seat:active { cursor:grabbing; }
+.seat:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
+.seat.gender-m { background:#25374C; color:#FFFFFF; border:2px solid #142232; }
+.seat.gender-m .group-tag { background:rgba(0,0,0,0.4); color:#F5DDA0; }
+.seat.gender-m button.score-btn { background:#142232; color:#fff; border:1px solid rgba(255,255,255,0.3); }
+.seat.gender-f { background:#FFF0F3; color:var(--ink); border:2px solid #E295A8; }
+.seat.gender-f .group-tag { background:rgba(226,149,168,0.25); color:#8A3B4D; }
+.seat.gender-f button.score-btn { background:#fff; color:var(--ink); border:1px solid #E295A8; }
+.seat .group-tag { font-size:0.62rem; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; white-space:nowrap; width:fit-content; }
+.seat .role-badges-wrap { position:absolute; top:4px; right:4px; display:flex; flex-direction:column; align-items:flex-end; gap:2px; max-width:90%; pointer-events:none; }
+.seat .role-badge { font-size:0.58rem; font-weight:900; background:var(--coral-deep); color:#FFF; padding:1px 4px; border-radius:4px; line-height:1.2; white-space:nowrap; }
+.seat-top-row { display:flex; justify-content:space-between; align-items:center; width:100%; gap:4px; overflow:hidden; margin-bottom:2px; }
+.seat-name { font-weight:800; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:left; }
+.seat-no { font-size:0.65rem; white-space:nowrap; flex-shrink:0; }
+.score-control-box { display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.08); border-radius:6px; padding:2px 4px; font-size:0.72rem; margin-top:2px; }
+.score-control-btns { display:flex; gap:1px; }
+.score-btn { width:20px; height:20px; font-size:0.7rem; font-weight:bold; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.seat.empty { background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
+.seat.drag-over { transform:scale(1.05); outline:3px dashed var(--coral-deep); z-index:10; }
 
-.job-brush-panel { background: var(--paper-deep); border: 2px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
-.brush-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
-.brush-btn { padding: 0.45rem 0.9rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--white); font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; }
-.brush-btn.active { background: var(--coral); color: var(--white); border-color: var(--coral-deep); transform: translateY(-2px); }
-.brush-btn.eraser.active { background: #c9564a; color: var(--white); }
+.job-brush-panel { background:var(--paper-deep); border:2px solid var(--line); border-radius:12px; padding:1rem 1.2rem; margin-bottom:1.2rem; }
+.brush-btns { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem; }
+.brush-btn { padding:0.45rem 0.9rem; border-radius:999px; border:2px solid var(--ink); background:var(--white); font-weight:700; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; }
+.brush-btn.active { background:var(--coral); color:var(--white); border-color:var(--coral-deep); transform:translateY(-2px); }
+.brush-btn.eraser.active { background:#c9564a; color:var(--white); }
 
-.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
-.export-btn{ border:2px solid var(--ink);border-radius:12px;padding:1.1rem;background:var(--paper); text-align:left;font-weight:700; }
-.export-btn:hover{background:var(--butter);}
+.export-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
+.export-btn { border:2px solid var(--ink); border-radius:12px; padding:1.1rem; background:var(--paper); text-align:left; font-weight:700; }
+.export-btn:hover { background:var(--butter); }
 
-.empty-hint{font-size:0.85rem;color:var(--ink-soft);padding:1rem;border:2px dashed var(--line);border-radius:10px;text-align:center;}
-.toast{ position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%); background:var(--ink);color:var(--paper);padding:0.7rem 1.2rem;border-radius:999px; font-size:0.85rem;z-index:1100;opacity:0;pointer-events:none;transition:opacity .3s ease; text-align:center; }
-.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
-.toast.toast-error{background:#c9564a;}
+.empty-hint { font-size:0.85rem; color:var(--ink-soft); padding:1rem; border:2px dashed var(--line); border-radius:10px; text-align:center; }
+.toast { position:fixed; bottom:1.4rem; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:0.7rem 1.2rem; border-radius:999px; font-size:0.85rem; z-index:1100; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; text-align:center; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
+.toast.toast-error { background:#c9564a; }
 
-.history-log-list{display:flex;flex-direction:column;gap:0.5rem;max-height:300px;overflow-y:auto;margin-top:0.8rem;}
-.history-log-item{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;border-radius:8px;background:var(--paper);border:1.5px solid var(--line);font-size:0.8rem;}
-.history-log-item .hl-delta.pos{color:#1d5c3a;font-weight:800;}
-.history-log-item .hl-delta.neg{color:#8A3B4D;font-weight:800;}
+.history-log-list { display:flex; flex-direction:column; gap:0.5rem; max-height:300px; overflow-y:auto; margin-top:0.8rem; }
+.history-log-item { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; padding:0.5rem 0.7rem; border-radius:8px; background:var(--paper); border:1.5px solid var(--line); font-size:0.8rem; }
+.history-log-item .hl-delta.pos { color:#1d5c3a; font-weight:800; }
+.history-log-item .hl-delta.neg { color:#8A3B4D; font-weight:800; }
+
+.diag-card { background:#FFF5F5; border:2px solid #E53E3E; border-radius:10px; padding:1rem; margin-top:1rem; font-size:0.82rem; color:#9B2C2C; }
+.diag-card h4 { font-size:0.95rem; margin-bottom:0.4rem; }
+.diag-card ol { margin:0.4rem 0 0 1.2rem; padding:0; }
 </style>
 </head>
 <body>
@@ -166,22 +182,26 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <span class="bar-divider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
       <button class="pill-btn small primary" id="firebaseModalBtn">🔥 Firebase 設定</button>
-      <span class="sync-status-badge syncing" id="firebaseStatusBadge">🟡 正在連線...</span>
+      <span class="sync-status-badge syncing" id="firebaseStatusBadge" title="點擊檢視診斷資訊">🟡 正在連線...</span>
     </div>
   </div>
 </header>
 
 <div class="modal-overlay" id="firebaseModal">
   <div class="modal-box">
-    <h3>🔥 Firebase 即時雲端同步設定</h3>
-    <p>系統已自動載入您的 Firebase 專案，跨裝置毫秒同步中！</p>
-    <div class="field">
+    <h3>🔥 Firebase 雲端同步設定與狀態診斷</h3>
+    <p>系統支援雲端即時雙向毫秒同步！當 Firebase 未連線時，自動切換至<strong>本機儲存 (localStorage)</strong> 確保運作不中斷。</p>
+
+    <div id="firebaseDiagArea"></div>
+
+    <div class="field" style="margin-top:1rem;">
       <label for="fbConfigInput">自訂 Firebase Config (JSON)：</label>
       <textarea id="fbConfigInput" placeholder="{}"></textarea>
     </div>
     <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-      <button class="pill-btn primary" id="saveFbConfigBtn">💾 儲存並連線</button>
+      <button class="pill-btn primary" id="saveFbConfigBtn">💾 儲存並重新連線</button>
       <button class="pill-btn danger" id="clearFbConfigBtn">恢復預設專案</button>
+      <button class="pill-btn" id="switchToLocalBtn">📴 切換為純本機儲存</button>
     </div>
     <div class="modal-btns"><button class="pill-btn" id="closeFbModalBtn">關閉</button></div>
   </div>
@@ -191,7 +211,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
   <div class="modal-box">
     <h3>📜 加分歷史紀錄</h3>
     <p>目前學生：<strong id="historyStuLabel"></strong></p>
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
       <button class="pill-btn small primary" id="addManualLogBtn">➕ 新增一筆加減分（含原因）</button>
     </div>
     <div class="history-log-list" id="historyLogList"><div class="empty-hint">尚無紀錄。</div></div>
@@ -204,7 +224,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
     <section class="hero">
       <p class="kicker">REALTIME CLASSROOM MANAGEMENT</p>
       <h1>所有班級座位表與即時計分</h1>
-      <p>🔥 已連結 Firebase 雲端資料庫！任何裝置點擊加分或修改座位，全自動雙向毫秒同步！</p>
+      <p>🔥 支援 Firebase 雲端資料庫雙向毫秒同步！若離線或無權限，亦自動採用本機高效儲存！</p>
     </section>
     <div id="dashboardClassGrid"></div>
   </div>
@@ -226,19 +246,19 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
         <div class="field"><label for="boysInput">男生資料 (座號 姓名 分數)</label><textarea id="boysInput" placeholder="01,王小明,85"></textarea></div>
         <div class="field"><label for="girlsInput">女生資料 (座號 姓名 分數)</label><textarea id="girlsInput" placeholder="01,陳小美,90"></textarea></div>
       </div>
-      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
         <button class="pill-btn primary" id="loadRosterBtn">載入名單</button>
-        <button class="pill-btn small" id="importFileBtn">📂 匯入 Excel/CSV</button>
+        <button class="pill-btn small" id="importFileBtn">📂 匯入 Excel/CSV 檔案</button>
         <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
       </div>
       <div class="roster-cols" style="margin-top:1.6rem;">
         <div class="roster-block">
           <h3>男生名單</h3>
-          <table class="roster" id="boysTable"><thead><tr><th>座號</th><th>姓名</th><th>分數</th><th></th></tr></thead><tbody></tbody></table>
+          <table class="roster" id="boysTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
         </div>
         <div class="roster-block">
           <h3>女生名單</h3>
-          <table class="roster" id="girlsTable"><thead><tr><th>座號</th><th>姓名</th><th>分數</th><th></th></tr></thead><tbody></tbody></table>
+          <table class="roster" id="girlsTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
         </div>
       </div>
     </div>
@@ -266,11 +286,11 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <button class="pill-btn primary" id="genSeatsBtn" style="margin-bottom:1rem;">將學生排入座位</button>
 
       <div class="job-brush-panel">
-        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
+        <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
       </div>
 
-      <div id="classroomCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
+      <div id="classroomCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line);">
         <div class="classroom-title-banner" id="captureClassTitle">班級座位表</div>
         <div class="board-label">— 講 台 —</div>
         <div class="seat-grid-container" id="seatArea"></div>
@@ -288,14 +308,14 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 
     <div class="card" style="margin-top:1rem;">
       <span class="tape" style="--tape-color:var(--coral);"></span>
-      <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 自動毫秒同步)</h2></div>
+      <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 雲端 / 本地自動同步)</h2></div>
       
       <div class="job-brush-panel">
-        <div style="font-size:0.85rem;font-weight:800;color:var(--ink);">🏷️ 選擇角色刷子：</div>
+        <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子：</div>
         <div class="brush-btns" id="scoreBrushBtns"></div>
       </div>
 
-      <div id="scoreViewCaptureArea" style="background:var(--white);padding:1.5rem;border-radius:12px;border:2px solid var(--line);">
+      <div id="scoreViewCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line);">
         <div class="classroom-title-banner" id="scoreCaptureClassTitle">班級即時加分面板</div>
         <div class="board-label">— 講 台 —</div>
         <div class="seat-grid-container" id="scoreSeatArea"></div>
@@ -306,8 +326,8 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
       <span class="tape" style="--tape-color:var(--peach);"></span>
       <div class="step-head"><span class="step-badge num">📊</span><h2>匯出成果</h2></div>
       <div class="export-grid">
-        <button class="export-btn" id="exportJpgBtn"><div>🖼️ 下載畫面 JPG</div><div style="font-size:0.75rem;color:var(--ink-soft);">儲存當前座位圖</div></button>
-        <button class="export-btn" id="exportXlsxBtn"><div>📊 下載成績 Excel (.xlsx)</div><div style="font-size:0.75rem;color:var(--ink-soft);">匯出含今日加分與總分報表</div></button>
+        <button class="export-btn" id="exportJpgBtn"><div>🖼️ 下載畫面 JPG</div><div style="font-size:0.75rem; color:var(--ink-soft);">儲存當前座位圖</div></button>
+        <button class="export-btn" id="exportXlsxBtn"><div>📊 下載成績 Excel (.xlsx)</div><div style="font-size:0.75rem; color:var(--ink-soft);">匯出含原始分、今日加分與總分報表</div></button>
       </div>
     </div>
   </div>
@@ -333,6 +353,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+// Global application state
 window.db = { years:{}, lastYearId:null };
 window.curYear = null;
 window.cur = null;
@@ -342,6 +363,9 @@ window.historyModalStuId = null;
 let currentView = 'dash';
 let toastTimer;
 let isUpdatingFromRemote = false;
+let isLocalMode = false;
+let firebaseLastError = null;
+
 let fbApp = null, fbAuth = null, fbDb = null, unsubscribeSnapshot = null;
 
 function escapeHtml(str) {
@@ -373,6 +397,12 @@ async function initFirebase() {
   const saved = localStorage.getItem('user_firebase_config');
   if (saved) { try { config = JSON.parse(saved); } catch(e){} }
 
+  if (isLocalMode) {
+    updateSyncStatus('local', '📴 本機儲存模式');
+    loadLocalFallback();
+    return;
+  }
+
   try {
     updateSyncStatus('syncing', '🟡 正在連線...');
     fbApp = initializeApp(config);
@@ -387,13 +417,18 @@ async function initFirebase() {
           await signInAnonymously(fbAuth);
         } catch (authErr) {
           console.warn("Firebase Anonymous auth failed:", authErr);
+          firebaseLastError = `匿名驗證錯誤 (${authErr.code || authErr.message})：請至 Firebase 控制台 Authentication -> Sign-in method 啟用「匿名 (Anonymous)」登入。`;
           updateSyncStatus('error', '🔴 請啟用匿名驗證');
+          renderDiagnostics();
+          loadLocalFallback();
         }
       }
     });
   } catch(err) {
     console.error("Firebase Init Error:", err);
+    firebaseLastError = `初始化失敗：${err.message}`;
     updateSyncStatus('error', '🔴 連線失敗');
+    renderDiagnostics();
     loadLocalFallback();
   }
 }
@@ -414,27 +449,63 @@ function setupFirestoreListener() {
       else if (currentView === 'config') renderConfigClassroom();
       else if (currentView === 'score') renderScoreClassroom();
       isUpdatingFromRemote = false;
+      firebaseLastError = null;
       updateSyncStatus('connected', '🟢 Firebase 即時同步中');
+      renderDiagnostics();
     } else {
       saveDB();
       updateSyncStatus('connected', '🟢 Firebase 已建立初始檔');
     }
   }, (err) => {
     console.error("Snapshot error:", err);
-    updateSyncStatus('error', '🔴 同步中斷');
+    firebaseLastError = `Firestore 讀取失敗 (${err.code || err.message})：請確認 Firebase Console 中的 Firestore Rules 已設定為「allow read, write: if true;」。`;
+    updateSyncStatus('error', '🔴 同步權限受限');
+    renderDiagnostics();
+    loadLocalFallback();
   });
+}
+
+function renderDiagnostics() {
+  const diagArea = document.getElementById('firebaseDiagArea');
+  if (!diagArea) return;
+
+  if (isLocalMode) {
+    diagArea.innerHTML = `<div class="diag-card" style="background:#EDF2F7; border-color:#CBD5E1; color:#334155;">
+      <h4>📴 目前為離線 / 本機儲存模式</h4>
+      <p>您的所有操作（加分、分組、座位）將完整儲存於目前瀏覽器中。如需跨裝置即時同步，請修復下方 Firebase 設定。</p>
+    </div>`;
+    return;
+  }
+
+  if (firebaseLastError) {
+    diagArea.innerHTML = `<div class="diag-card">
+      <h4>🚨 連線問題診斷與排除建議：</h4>
+      <div>${escapeHtml(firebaseLastError)}</div>
+      <ol>
+        <li>開啟 <a href="https://console.firebase.google.com/" target="_blank" style="color:#C53030;">Firebase Console</a>。</li>
+        <li><strong>匿名登入：</strong>至 Build -> Authentication -> Sign-in method 啟用「匿名 (Anonymous)」。</li>
+        <li><strong>資料庫權限：</strong>至 Build -> Firestore Database -> Rules 將權限修改為 <code>allow read, write: if true;</code>。</li>
+      </ol>
+    </div>`;
+  } else {
+    diagArea.innerHTML = `<div class="diag-card" style="background:#F0FFF4; border-color:#38A169; color:#22543D;">
+      <h4>🟢 連線狀態良好！</h4>
+      <p>目前已成功與 Firebase 雲端資料庫雙向連線，所有變動毫秒級即時同步中。</p>
+    </div>`;
+  }
 }
 
 async function saveDB() {
   localStorage.setItem('sgh_db_v16', JSON.stringify(window.db));
   if (isUpdatingFromRemote) return;
 
-  if (fbDb && fbAuth?.currentUser) {
+  if (!isLocalMode && fbDb && fbAuth?.currentUser) {
     try {
       const docRef = doc(fbDb, 'classroom_system', 'master_data');
       await setDoc(docRef, JSON.parse(JSON.stringify(window.db)));
     } catch(err) {
       console.error("Cloud save failed:", err);
+      toast('雲端儲存失敗，已自動存至本機', true);
     }
   }
 }
@@ -445,6 +516,8 @@ function loadLocalFallback() {
   refreshActivePointers();
   renderHeaderSelects();
   if (currentView === 'dash') renderDashboard();
+  else if (currentView === 'config') renderConfigClassroom();
+  else if (currentView === 'score') renderScoreClassroom();
 }
 
 function refreshActivePointers(){
@@ -480,7 +553,7 @@ function allStudents(){ return cur ? [...(cur.boys||[]), ...(cur.girls||[])] : [
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
 
 function getStudentScoreObj(stuId){
-  if(!cur) return {plusScore:0};
+  if(!cur) return {plusScore:0, scoreLog:[]};
   if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, scoreLog:[] };
   return cur.studentScores[stuId];
 }
@@ -585,8 +658,10 @@ function getBaseSeatHtml(occ, idx, showScore = false){
 
   let controls = '';
   if(showScore){
+    const baseVal = Number(s.score) || 0;
+    const totalVal = baseVal + sc.plusScore;
     controls = `<div class="score-control-box">
-      <span>今日加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
+      <span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong> (總:${totalVal})</span>
       <div class="score-control-btns">
         <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
         <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
@@ -685,8 +760,8 @@ function renderScoreSeats(){
       sc.plusScore += dir;
       if(!sc.scoreLog) sc.scoreLog = [];
       sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta: dir, reason: dir >= 0 ? '課堂加分' : '課堂扣分' });
-      document.getElementById(`plus-disp-${id}`).textContent = sc.plusScore;
       saveDB();
+      renderScoreSeats();
     });
   });
 }
@@ -768,7 +843,7 @@ function renderBrushBtns(){
   });
 }
 
-function parseRoster(text, gender){
+function parseRosterText(text, gender){
   return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
     let parts = line.split(/[,，\s\t]+/);
     let seatNo='', name='', score=null;
@@ -782,7 +857,7 @@ function renderRosterTables(){
   if(!cur) return;
   const rT = (id, list) => {
     const tbody = document.querySelector(`#${id} tbody`);
-    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score!==null?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
+    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score!==null&&s.score!==undefined?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
     tbody.querySelectorAll('.rm').forEach(btn=> btn.addEventListener('click', ()=>{
       const idx = list.findIndex(x=>x.id===btn.closest('tr').dataset.id);
       if(idx>-1){ list.splice(idx,1); saveDB(); renderRosterTables(); }
@@ -790,6 +865,87 @@ function renderRosterTables(){
   };
   rT('boysTable', cur.boys || []); rT('girlsTable', cur.girls || []);
 }
+
+document.getElementById('importFileBtn').addEventListener('click', () => {
+  document.getElementById('importFileInput').click();
+});
+
+document.getElementById('importFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file || !cur) return;
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (jsonData.length < 2) {
+        toast('檔案內無有效的學生資料', true);
+        return;
+      }
+
+      // Detect header index
+      let seatCol = -1, nameCol = -1, genderCol = -1, scoreCol = -1;
+      const headers = jsonData[0].map(h => String(h || '').trim());
+
+      headers.forEach((h, idx) => {
+        if (/座號|編號|no/i.test(h)) seatCol = idx;
+        else if (/姓名|名字|name/i.test(h)) nameCol = idx;
+        else if (/性別|gender/i.test(h)) genderCol = idx;
+        else if (/原始|分數|成績|score/i.test(h)) scoreCol = idx;
+      });
+
+      // Fallback col mapping if headers are missing
+      if (nameCol === -1) nameCol = 1;
+      if (seatCol === -1) seatCol = 0;
+
+      let importedBoys = [];
+      let importedGirls = [];
+
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || row.length === 0) continue;
+
+        const name = String(row[nameCol] || '').trim();
+        if (!name) continue;
+
+        const seatNo = String(row[seatCol] || '').trim();
+        const genderRaw = String(genderCol >= 0 ? row[genderCol] || '' : '').trim();
+        const scoreVal = scoreCol >= 0 && row[scoreCol] !== undefined ? Number(row[scoreCol]) : null;
+
+        const isFemale = /女|F|female/i.test(genderRaw);
+        const gender = isFemale ? 'F' : 'M';
+
+        const stu = {
+          id: gender + '_' + uid(),
+          seatNo,
+          name,
+          score: isNaN(scoreVal) ? null : scoreVal,
+          gender
+        };
+
+        if (gender === 'F') importedGirls.push(stu);
+        else importedBoys.push(stu);
+      }
+
+      cur.boys = (cur.boys || []).concat(importedBoys);
+      cur.girls = (cur.girls || []).concat(importedGirls);
+
+      saveDB();
+      renderRosterTables();
+      toast(`成功匯入 ${importedBoys.length + importedGirls.length} 位學生！`);
+    } catch (err) {
+      console.error("Import error:", err);
+      toast('檔案解析失敗，請確認是否為標準 Excel/CSV', true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = ''; // Reset input
+});
 
 document.getElementById('goDashboardBtn').addEventListener('click', ()=> switchView('dash'));
 document.getElementById('backToDashBtn').addEventListener('click', ()=> switchView('dash'));
@@ -843,8 +999,8 @@ document.getElementById('newYearBtn').addEventListener('click', ()=>{
 
 document.getElementById('loadRosterBtn').addEventListener('click', ()=>{
   if(!cur) return;
-  const b = parseRoster(document.getElementById('boysInput').value,'M');
-  const g = parseRoster(document.getElementById('girlsInput').value,'F');
+  const b = parseRosterText(document.getElementById('boysInput').value,'M');
+  const g = parseRosterText(document.getElementById('girlsInput').value,'F');
   cur.boys = (cur.boys||[]).concat(b); cur.girls = (cur.girls||[]).concat(g);
   document.getElementById('boysInput').value=''; document.getElementById('girlsInput').value='';
   saveDB(); renderRosterTables(); toast('已載入學生名單');
@@ -857,14 +1013,15 @@ document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
   const size = cur.groupConfig.value || 4;
   const numGroups = Math.ceil(stus.length / size);
   const groups = Array.from({length: numGroups}, (_, i) => ({ id: i, members: [] }));
+  
   stus.forEach((s, i) => groups[i % numGroups].members.push(s.id));
   cur.groups = groups; saveDB(); toast('自動分組完成');
   
   const resArea = document.getElementById('groupsResult');
-  resArea.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.8rem;">` +
-    groups.map(g => `<div style="border:2px solid var(--ink);border-radius:10px;padding:0.6rem;background:var(--paper-deep);">
-      <div style="font-weight:800;font-size:0.85rem;margin-bottom:0.4rem;">第 ${g.id+1} 組 (${g.members.length}人)</div>
-      <div style="font-size:0.8rem;color:var(--ink-soft);">${g.members.map(id => findStudent(id)?.name).join('、')}</div>
+  resArea.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.8rem;">` +
+    groups.map(g => `<div style="border:2px solid var(--ink); border-radius:10px; padding:0.6rem; background:var(--paper-deep);">
+      <div style="font-weight:800; font-size:0.85rem; margin-bottom:0.4rem;">第 ${g.id+1} 組 (${g.members.length}人)</div>
+      <div style="font-size:0.8rem; color:var(--ink-soft);">${g.members.map(id => findStudent(id)?.name).join('、')}</div>
     </div>`).join('') + `</div>`;
 });
 
@@ -878,12 +1035,26 @@ document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
   saveDB(); renderConfigSeats(); toast('座位排定！可拖曳卡片互換位置');
 });
 
+document.getElementById('firebaseStatusBadge').addEventListener('click', ()=>{
+  document.getElementById('firebaseModal').style.display = 'flex';
+  renderDiagnostics();
+});
+
 document.getElementById('firebaseModalBtn').addEventListener('click', ()=>{
   document.getElementById('firebaseModal').style.display = 'flex';
   document.getElementById('fbConfigInput').value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
+  renderDiagnostics();
 });
+
 document.getElementById('closeFbModalBtn').addEventListener('click', ()=>{
   document.getElementById('firebaseModal').style.display = 'none';
+});
+
+document.getElementById('switchToLocalBtn').addEventListener('click', ()=>{
+  isLocalMode = true;
+  document.getElementById('firebaseModal').style.display = 'none';
+  toast('已切換為純本機儲存模式');
+  loadLocalFallback();
 });
 
 document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
@@ -892,6 +1063,7 @@ document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
   try {
     const parsed = JSON.parse(val);
     localStorage.setItem('user_firebase_config', JSON.stringify(parsed));
+    isLocalMode = false;
     document.getElementById('firebaseModal').style.display = 'none';
     toast('已儲存設定，正在嘗試連線...');
     initFirebase();
@@ -902,6 +1074,7 @@ document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
 
 document.getElementById('clearFbConfigBtn').addEventListener('click', ()=>{
   localStorage.removeItem('user_firebase_config');
+  isLocalMode = false;
   document.getElementById('firebaseModal').style.display = 'none';
   toast('已恢復預設專案設定');
   initFirebase();
@@ -911,12 +1084,14 @@ document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    const aoa = [['座號','姓名','性別','工作角色',`${dateStr} 今日加分`,'總分']];
+    const aoa = [['座號','姓名','性別','工作角色','原始分數',`${dateStr} 今日加分`,'總分']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
       const roles = (cur.studentRoles[s.id]||[]).join('、');
       const baseScore = Number(s.score) || 0;
-      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, sc.plusScore, baseScore + sc.plusScore ]);
+      const plusScore = Number(sc.plusScore) || 0;
+      const totalScore = baseScore + plusScore;
+      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, baseScore, plusScore, totalScore ]);
     });
     const wb = XLSX.utils.book_new(); 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績總表');
