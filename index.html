@@ -150,7 +150,7 @@ table.roster .rm{ background:none;border:none;color:#c9564a;font-size:1rem;font-
 <div class="modal-overlay" id="firebaseModal">
   <div class="modal-box">
     <h3>🔥 Firebase 即時雲端同步設定</h3>
-    <p>系統已預設為您的專屬 Firebase 專案（<code>gen-lang-client-0393721642</code>），全自動跨裝置毫秒同步中！</p>
+    <p>系統已預設為您的專屬 Firebase 專案，全自動跨裝置毫秒同步中！</p>
     <div class="field">
       <label for="fbConfigInput">如需更換其他 Firebase 金鑰，可於下方修改：</label>
       <textarea id="fbConfigInput" placeholder="{}"></textarea>
@@ -288,7 +288,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 嵌入使用者的最新 Firebase 設定金鑰
+// 已嵌入您的最新 Firebase 設定金鑰
 const EMBEDDED_FIREBASE_CONFIG = {
   apiKey: "AIzaSyA3UFRYEoBhv_4QlU7XvyODo2o0EGBrJcc",
   authDomain: "gen-lang-client-0393721642.firebaseapp.com",
@@ -309,7 +309,6 @@ let currentView = 'dash';
 let toastTimer;
 let isUpdatingFromRemote = false;
 
-// Firebase 全域控制
 let fbApp = null, fbAuth = null, fbDb = null, unsubscribeSnapshot = null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-classroom-app';
 
@@ -337,7 +336,6 @@ function toast(msg, isError){
 
 async function initFirebase() {
   let config = EMBEDDED_FIREBASE_CONFIG;
-  
   const saved = localStorage.getItem('user_firebase_config');
   if (saved) {
     try { config = JSON.parse(saved); } catch(e){}
@@ -358,7 +356,7 @@ async function initFirebase() {
     setupFirestoreListener();
   } catch(err) {
     console.error("Firebase Initialization Error:", err);
-    updateFbStatus(false, "🔴 請至 Firebase 控制台點擊「建立資料庫 (Firestore)」");
+    updateFbStatus(false, "🔴 請至 Firebase 控制台確認 Firestore 是否已啟用");
     loadLocalFallback();
   }
 }
