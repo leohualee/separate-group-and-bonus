@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統 (全功能修復完整版)</title>
+<title>分組座位與即時計分系統 (全功能Firebase雲端整合版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -75,11 +75,15 @@ select:disabled { background:var(--paper-deep); color:var(--ink-soft); cursor:no
 .year-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; gap:1rem; }
 .year-header h2 { font-size:1.4rem; display:flex; align-items:center; gap:0.5rem; }
 
-.class-overview-card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:12px; box-shadow:var(--shadow); transition:transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
+.class-overview-card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:12px; box-shadow:var(--shadow); transition:transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease; display:flex; flex-direction:column; }
 .class-overview-card:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.15); }
-.card-content { padding:1.2rem; cursor:pointer; flex:1; }
+.class-overview-card.selected { border-color:var(--coral-deep); box-shadow:0 0 0 4px rgba(217,122,98,0.2); background:#FFF9F8; }
+.card-check { position:absolute; top:8px; right:8px; z-index:10; width:34px; height:34px; background:rgba(255,255,255,0.9); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.card-check input { width:18px; height:18px; cursor:pointer; accent-color:var(--coral-deep); pointer-events:none; }
+.card-content { padding:1.2rem; padding-right:3rem; cursor:pointer; flex:1; }
 .class-overview-card h3 { font-size:1.1rem; margin-bottom:0.4rem; color:var(--ink); }
 .class-overview-card .meta { font-size:0.8rem; color:var(--ink-soft); margin-bottom:0.8rem; }
+.class-overview-card .stats { display:flex; gap:0.6rem; font-size:0.78rem; font-weight:700; background:var(--paper-deep); padding:0.4rem 0.8rem; border-radius:8px; flex-wrap:wrap; }
 
 .card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.8rem clamp(1.1rem,3vw,2.2rem) 2rem; margin-top:2.6rem; }
 .tape { position:absolute; top:-14px; left:32px; width:86px; height:26px; background:repeating-linear-gradient(45deg, var(--tape-color,var(--butter)), var(--tape-color,var(--butter)) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px); transform:rotate(-4deg); border:1px solid rgba(58,53,50,0.15); opacity:0.92; }
@@ -116,31 +120,52 @@ table.roster td[contenteditable] { outline:none; border-radius:6px; }
 table.roster td[contenteditable]:focus { background:var(--paper-deep); }
 table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; font-weight:900; padding:0 0.3rem; }
 
+.chip-list { display:flex; flex-wrap:wrap; gap:0.5rem; }
+.chip { display:inline-flex; align-items:center; gap:0.5rem; padding:0.4rem 0.7rem; border-radius:999px; border:2px solid var(--ink); background:var(--lilac); font-size:0.8rem; font-weight:700; }
+.chip button { background:none; border:none; font-weight:900; color:var(--ink); font-size:0.9rem; cursor:pointer; }
+
+.groups-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1rem; }
+.group-card { border:2px solid var(--ink); border-radius:12px; overflow:hidden; background:var(--paper); }
+.group-card .gh { padding:0.6rem 0.9rem; font-weight:800; font-family:'Baloo 2',sans-serif; background:var(--gcolor,var(--mint)); display:flex; justify-content:space-between; align-items:center; }
+.group-card ul { list-style:none; margin:0; padding:0.5rem 0.4rem; }
+.group-card li { display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.6rem; border-radius:8px; font-size:0.85rem; }
+.group-card li:hover { background:var(--paper-deep); }
+.group-card li .meta { color:var(--ink-soft); font-size:0.74rem; }
+.group-card select.move-sel { font-size:0.72rem; padding:0.15rem 0.3rem; border-radius:6px; }
+
 .classroom-title-banner { text-align:center; font-size:1.1rem; font-weight:900; color:var(--ink); margin-bottom:0.8rem; }
 .board-label { text-align:center; font-size:0.85rem; font-weight:900; color:var(--ink); background:var(--butter); border:2px solid var(--ink); border-radius:8px; padding:0.5rem 1rem; margin:0 auto 1.2rem; max-width:300px; letter-spacing:0.2em; }
 .seat-grid-container { overflow-x:auto; padding:1rem 0.5rem; }
 .seat-grid { display:grid; gap:0.7rem; justify-content:center; }
 
-.seat { width:148px; min-height:138px; border-radius:12px; border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem; font-size:0.75rem; display:flex; flex-direction:column; justify-space-between; user-select:none; transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow:hidden; cursor:grab; }
+.seat { width:148px; min-height:138px; border-radius:12px; border:2px solid var(--ink); background:var(--scolor,var(--paper-deep)); padding:0.4rem 0.5rem; font-size:0.75rem; display:flex; flex-direction:column; justify-content:space-between; user-select:none; transition:transform .15s ease, box-shadow .2s ease; position:relative; overflow:hidden; cursor:grab; }
 .seat:active { cursor:grabbing; }
 .seat:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
 .seat.gender-m { background:#25374C; color:#FFFFFF; border:2px solid #142232; }
 .seat.gender-m .group-tag { background:rgba(0,0,0,0.4); color:#F5DDA0; }
-.seat.gender-m button.score-btn { background:#142232; color:#fff; border:1px solid rgba(255,255,255,0.3); }
+.seat.gender-m select, .seat.gender-m button.score-btn { background:#142232; color:#fff; border:1px solid rgba(255,255,255,0.3); }
 .seat.gender-f { background:#FFF0F3; color:var(--ink); border:2px solid #E295A8; }
 .seat.gender-f .group-tag { background:rgba(226,149,168,0.25); color:#8A3B4D; }
-.seat.gender-f button.score-btn { background:#fff; color:var(--ink); border:1px solid #E295A8; }
+.seat.gender-f select, .seat.gender-f button.score-btn { background:#fff; color:var(--ink); border:1px solid #E295A8; }
 .seat .group-tag { font-size:0.62rem; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; white-space:nowrap; width:fit-content; }
 .seat .role-badges-wrap { position:absolute; top:4px; right:4px; display:flex; flex-direction:column; align-items:flex-end; gap:2px; max-width:90%; pointer-events:none; }
 .seat .role-badge { font-size:0.58rem; font-weight:900; background:var(--coral-deep); color:#FFF; padding:1px 4px; border-radius:4px; line-height:1.2; white-space:nowrap; }
 .seat-top-row { display:flex; justify-content:space-between; align-items:center; width:100%; gap:4px; overflow:hidden; margin-bottom:2px; }
 .seat-name { font-weight:800; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:left; }
 .seat-no { font-size:0.65rem; white-space:nowrap; flex-shrink:0; }
+.seat-score-row { display:flex; align-items:center; justify-content:space-between; gap:2px; margin-top:2px; }
+.seat-score-row select { padding:1px; font-size:0.7rem; border-radius:4px; width:48px; }
 .score-control-box { display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.08); border-radius:6px; padding:2px 4px; font-size:0.72rem; margin-top:2px; }
 .score-control-btns { display:flex; gap:1px; }
 .score-btn { width:20px; height:20px; font-size:0.7rem; font-weight:bold; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .seat.empty { background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; }
 .seat.drag-over { transform:scale(1.05); outline:3px dashed var(--coral-deep); z-index:10; }
+
+.pods-grid { display:grid; gap:0.9rem; justify-content:center; }
+.pods-grid .pod-box { border:2px dashed var(--ink); border-radius:14px; padding:0.6rem; background:rgba(255,255,255,0.7); box-shadow:0 3px 10px rgba(0,0,0,0.03); }
+.pods-grid .pod-desks { display:grid; gap:0.4rem; justify-content:center; }
+.pod-head { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.85rem; padding:0.2rem 0.6rem; border-radius:6px; background:var(--pcolor,var(--mint)); margin-bottom:0.6rem; display:inline-block; border:1px solid var(--ink); }
+.pods-grid .seat { width:116px; min-height:110px; padding:0.3rem 0.4rem; }
 
 .job-brush-panel { background:var(--paper-deep); border:2px solid var(--line); border-radius:12px; padding:1rem 1.2rem; margin-bottom:1.2rem; }
 .brush-btns { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem; }
@@ -157,10 +182,26 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 .toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
 .toast.toast-error { background:#c9564a; }
 
+.archive-list { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.8rem; max-height:260px; overflow-y:auto; }
+.archive-item { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; background:var(--paper); border:2px solid var(--line); border-radius:10px; padding:0.6rem 0.8rem; flex-wrap:wrap; }
+
 .history-log-list { display:flex; flex-direction:column; gap:0.5rem; max-height:300px; overflow-y:auto; margin-top:0.8rem; }
 .history-log-item { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; padding:0.5rem 0.7rem; border-radius:8px; background:var(--paper); border:1.5px solid var(--line); font-size:0.8rem; }
 .history-log-item .hl-delta.pos { color:#1d5c3a; font-weight:800; }
 .history-log-item .hl-delta.neg { color:#8A3B4D; font-weight:800; }
+
+.batch-toggle-row { display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; margin-top:0.7rem; padding-top:0.7rem; border-top:1.5px dashed var(--line); }
+.seat.batch-selectable { cursor:pointer; }
+.seat.batch-selected { outline:3px solid var(--coral-deep); outline-offset:2px; box-shadow:0 0 0 4px rgba(217,122,98,0.25); }
+.seat-select-check { position:absolute; top:4px; left:4px; width:20px; height:20px; border-radius:5px; border:2px solid currentColor; background:rgba(255,255,255,0.85); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:900; color:var(--ink); z-index:3; }
+.seat.batch-selected .seat-select-check { background:var(--coral-deep); color:#fff; border-color:var(--coral-deep); }
+.batch-toolbar { position:sticky; bottom:0.8rem; z-index:40; display:none; align-items:center; gap:0.6rem; flex-wrap:wrap; background:var(--ink); color:var(--paper); border-radius:14px; padding:0.7rem 1rem; margin-top:1rem; box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.batch-toolbar.show { display:flex; }
+.batch-toolbar .bt-count { font-weight:800; font-size:0.85rem; background:var(--coral); padding:0.25rem 0.7rem; border-radius:999px; white-space:nowrap; }
+.batch-toolbar button { padding:0.4rem 0.85rem; border-radius:999px; border:2px solid var(--paper); background:transparent; color:var(--paper); font-weight:700; font-size:0.78rem; }
+.batch-toolbar button:hover { background:rgba(255,255,255,0.15); }
+.batch-toolbar button.bt-primary { background:var(--coral); border-color:var(--coral-deep); }
+.batch-toolbar button.bt-danger { background:#c9564a; border-color:#9a3c33; }
 
 .diag-card { background:#FFF5F5; border:2px solid #E53E3E; border-radius:10px; padding:1rem; margin-top:1rem; font-size:0.82rem; color:#9B2C2C; }
 .diag-card h4 { font-size:0.95rem; margin-bottom:0.4rem; }
@@ -179,9 +220,10 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
       </div>
       <select id="yearSelect" aria-label="選擇學年度"></select>
       <button class="pill-btn small" id="newYearBtn">＋ 新增學年度</button>
+      <button class="pill-btn small" id="archiveListBtn">📦 已封存清單</button>
       <span class="bar-divider"></span>
       <select id="classSelect" aria-label="選擇班級"></select>
-      <button class="pill-btn small primary" id="firebaseModalBtn">🔥 Firebase 設定</button>
+      <button class="pill-btn small primary" id="firebaseModalBtn">🔥 Firebase 雲端設定</button>
       <span class="sync-status-badge syncing" id="firebaseStatusBadge" title="點擊檢視診斷資訊">🟡 正在連線...</span>
     </div>
   </div>
@@ -190,7 +232,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 <div class="modal-overlay" id="firebaseModal">
   <div class="modal-box">
     <h3>🔥 Firebase 雲端同步設定與狀態診斷</h3>
-    <p>系統支援雲端即時雙向毫秒同步！當 Firebase 未連線時，自動切換至<strong>本機儲存 (localStorage)</strong> 確保運作不中斷。</p>
+    <p>系統支援雲端即時雙向毫秒同步！當手機或電腦離線時，自動切換至<strong>本機儲存 (localStorage)</strong> 確保運作不中斷。</p>
 
     <div id="firebaseDiagArea"></div>
 
@@ -203,7 +245,29 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
       <button class="pill-btn danger" id="clearFbConfigBtn">恢復預設專案</button>
       <button class="pill-btn" id="switchToLocalBtn">📴 切換為純本機儲存</button>
     </div>
+    <div style="background:var(--paper-deep); padding:1rem; border-radius:10px; margin-top:1.2rem; border:1.5px solid var(--line);">
+      <div style="font-weight:800; margin-bottom:0.4rem; font-size:0.9rem;">💻 本機 JSON 檔案備份與還原</div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button class="pill-btn small" id="cloudBackupBtn">📥 下載所有資料 JSON 備份</button>
+        <button class="pill-btn small" id="cloudRestoreBtn">📤 匯入 JSON 檔案還原</button>
+        <input type="file" id="cloudRestoreFile" accept=".json" style="display:none;">
+      </div>
+    </div>
     <div class="modal-btns"><button class="pill-btn" id="closeFbModalBtn">關閉</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="archiveListModal">
+  <div class="modal-box">
+    <h3>📦 已封存學年度</h3>
+    <p>封存後的學年資料已從主資料庫移除，僅保留基本資訊。可隨時讀取備份 JSON 進行還原。</p>
+    <div class="archive-list" id="archiveListWrap"><div class="empty-hint">目前沒有已封存的學年度。</div></div>
+    <div style="background:var(--paper-deep); padding:1rem; border-radius:10px; margin-top:1rem; border:1.5px solid var(--line);">
+      <div style="font-weight:800; margin-bottom:0.5rem; font-size:0.85rem;">📤 還原封存檔</div>
+      <button class="pill-btn small" id="restoreArchiveBtn">選擇封存 JSON 檔案</button>
+      <input type="file" id="restoreArchiveFile" accept=".json" style="display:none;">
+    </div>
+    <div class="modal-btns"><button class="pill-btn" id="archiveListCloseBtn">關閉</button></div>
   </div>
 </div>
 
@@ -224,8 +288,15 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
     <section class="hero">
       <p class="kicker">REALTIME CLASSROOM MANAGEMENT</p>
       <h1>所有班級座位表與即時計分</h1>
-      <p>🔥 支援 Firebase 雲端資料庫雙向毫秒同步！若離線或無權限，亦自動採用本機高效儲存！</p>
+      <p>🔥 支援 Firebase 雲端毫秒同步！可跨手機、平板與電腦即時同步操控！</p>
     </section>
+
+    <div class="batch-toolbar" id="dashBatchToolbar" style="bottom: 1.4rem;">
+      <span class="bt-count" id="dashBatchCount">已選 0 個班級</span>
+      <button class="bt-danger" id="dashBatchDeleteBtn">🗑️ 刪除選取的班級</button>
+      <button id="dashBatchClearBtn">取消選取</button>
+    </div>
+
     <div id="dashboardClassGrid"></div>
   </div>
 
@@ -255,10 +326,12 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <div class="roster-block">
           <h3>男生名單</h3>
           <table class="roster" id="boysTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
+          <button class="pill-btn small" id="addBoyBtn" style="margin-top:0.6rem;">＋ 新增男生</button>
         </div>
         <div class="roster-block">
           <h3>女生名單</h3>
           <table class="roster" id="girlsTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
+          <button class="pill-btn small" id="addGirlBtn" style="margin-top:0.6rem;">＋ 新增女生</button>
         </div>
       </div>
     </div>
@@ -266,28 +339,92 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
     <div class="card">
       <span class="tape" style="--tape-color:var(--mint);"></span>
       <div class="step-head"><span class="step-badge num">2</span><h2>自動分組設定</h2></div>
-      <div class="stepper-row"><span class="label">每組人數</span><div class="stepper"><button id="decGroupSizeBtn">－</button><span class="val" id="groupSizeVal">4</span><button id="incGroupSizeBtn">＋</button></div></div>
+      
+      <div class="toggle-group" id="sizeModeToggle">
+        <button data-mode="bySize" class="active">指定每組人數</button>
+        <button data-mode="byCount">指定分組數量</button>
+      </div>
+
+      <div class="stepper-row">
+        <span class="label" id="sizeStepperLabel">每組人數</span>
+        <div class="stepper"><button id="decGroupSizeBtn">－</button><span class="val" id="groupSizeVal">4</span><button id="incGroupSizeBtn">＋</button></div>
+      </div>
+      
       <div class="toggle-group" id="algoToggle">
         <button data-algo="random" class="active">隨機分組</button>
         <button data-algo="gender">性別平衡</button>
         <button data-algo="scoreGender">成績平均分配 (S型)</button>
       </div>
+
+      <label style="display:flex; align-items:center; gap:0.6rem; margin:0.6rem 0 1rem; cursor:pointer;">
+        <input type="checkbox" id="useConstraintsToggle" style="width:18px; height:18px; accent-color:var(--coral-deep);">
+        <span style="font-size:0.85rem; font-weight:700;">同時套用自訂迴避條件（不能同組）</span>
+      </label>
+
+      <div id="constraintPanel" style="display:none; background:var(--paper-deep); padding:1rem; border-radius:10px; margin-bottom:1rem;">
+        <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+          <select id="constraintA"></select>
+          <span style="font-size:0.8rem;">不能與</span>
+          <select id="constraintB"></select>
+          <button class="pill-btn small" id="addConstraintBtn">加入限制</button>
+        </div>
+        <div class="chip-list" id="constraintChips" style="margin-top:0.8rem;"></div>
+      </div>
+
       <button class="pill-btn primary" id="genGroupsBtn">產生分組</button>
-      <div id="groupsResult" style="margin-top:1rem;"></div>
+    </div>
+
+    <div class="card">
+      <span class="tape" style="--tape-color:var(--sky);"></span>
+      <div class="step-head"><span class="step-badge num">3</span><h2>分組結果調整</h2></div>
+      <div id="groupsWarn"></div>
+      <div id="groupsResult"><div class="empty-hint">尚未產生分組。</div></div>
     </div>
 
     <div class="card">
       <span class="tape" style="--tape-color:var(--butter);"></span>
-      <div class="step-head"><span class="step-badge num">3</span><h2>排座位與排法</h2></div>
-      <div class="stepper-row">
+      <div class="step-head"><span class="step-badge num">4</span><h2>排座位與排法</h2></div>
+      
+      <div class="toggle-group" id="seatLayoutModeToggle">
+        <button data-mode="grid" class="active">🏫 傳統矩陣行列</button>
+        <button data-mode="pods">🧩 小組島嶼桌次</button>
+      </div>
+
+      <div id="gridSeatControls" class="stepper-row">
         <span class="label">排數（直）</span><div class="stepper"><button id="decRowsBtn">－</button><span class="val" id="rowsVal">5</span><button id="incRowsBtn">＋</button></div>
         <span class="label">行數（橫）</span><div class="stepper"><button id="decColsBtn">－</button><span class="val" id="colsVal">6</span><button id="incColsBtn">＋</button></div>
       </div>
+
+      <div id="podSeatControls" style="display:none; background:var(--paper-deep); padding:1rem; border-radius:12px; margin-bottom:1rem;">
+        <div class="stepper-row">
+          <span class="label">島嶼橫欄</span><div class="stepper"><button id="decPodColsBtn">－</button><span class="val" id="podColsVal">3</span><button id="incPodColsBtn">＋</button></div>
+          <span class="label">桌次排列</span>
+          <select id="podDeskLayoutSelect">
+            <option value="2x2">2排 × 2行 (4人桌)</option>
+            <option value="2x3">2排 × 3行 (6人桌)</option>
+            <option value="3x2">3排 × 2行 (6人桌)</option>
+            <option value="1x4">1排 × 4行 (一字)</option>
+          </select>
+        </div>
+      </div>
+
       <button class="pill-btn primary" id="genSeatsBtn" style="margin-bottom:1rem;">將學生排入座位</button>
 
       <div class="job-brush-panel">
         <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
+        <div class="batch-toggle-row">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; font-weight:700; cursor:pointer;">
+            <input type="checkbox" id="configBatchModeToggle" style="width:16px; height:16px; accent-color:var(--coral-deep);">
+            <span>☑️ 批次選取模式（勾選多位學生後統一指派角色）</span>
+          </label>
+        </div>
+        <div class="batch-toolbar" id="configBatchToolbar">
+          <span class="bt-count" id="configBatchCount">已選 0 位</span>
+          <button class="bt-primary" id="configBatchApplyBrush">套用刷子</button>
+          <button id="configBatchClearRole">清除角色</button>
+          <button id="configBatchClearSel">取消選取</button>
+        </div>
       </div>
 
       <div id="classroomCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line);">
@@ -295,6 +432,16 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <div class="board-label">— 講 台 —</div>
         <div class="seat-grid-container" id="seatArea"></div>
       </div>
+    </div>
+
+    <div class="card">
+      <span class="tape" style="--tape-color:var(--lilac);"></span>
+      <div class="step-head"><span class="step-badge num">5</span><h2>自訂分工角色清單</h2></div>
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <input type="text" id="newJobInput" class="text-input" placeholder="新增角色名稱..." style="max-width:240px;">
+        <button class="pill-btn primary" id="addJobBtn">新增角色</button>
+      </div>
+      <div class="chip-list" id="jobChips" style="margin-top:0.8rem;"></div>
     </div>
   </div>
 
@@ -308,11 +455,24 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
     <div class="card" style="margin-top:1rem;">
       <span class="tape" style="--tape-color:var(--coral);"></span>
-      <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 雲端 / 本地自動同步)</h2></div>
+      <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分與評級 (Firebase 雲端同步)</h2></div>
       
       <div class="job-brush-panel">
         <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子：</div>
         <div class="brush-btns" id="scoreBrushBtns"></div>
+        <div class="batch-toggle-row">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; font-weight:700; cursor:pointer;">
+            <input type="checkbox" id="scoreBatchModeToggle" style="width:16px; height:16px; accent-color:var(--coral-deep);">
+            <span>☑️ 批次選取模式（勾選多位學生後統一加分/指派角色）</span>
+          </label>
+        </div>
+        <div class="batch-toolbar" id="scoreBatchToolbar">
+          <span class="bt-count" id="scoreBatchCount">已選 0 位</span>
+          <button class="bt-primary" id="scoreBatchPlus">批次加減分</button>
+          <button id="scoreBatchApplyBrush">套用刷子</button>
+          <button id="scoreBatchClearRole">清除角色</button>
+          <button id="scoreBatchClearSel">取消選取</button>
+        </div>
       </div>
 
       <div id="scoreViewCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line);">
@@ -353,12 +513,14 @@ const DEFAULT_FIREBASE_CONFIG = {
 const GROUP_COLORS = ['#F6C9CE','#BFE3D0','#BFDCEB','#F5DDA0','#D9C9F0','#F9D8B4','#C9E4DE','#F2C6DE','#C6DBDA','#E3D5CA'];
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-// Global application state
-window.db = { years:{}, lastYearId:null };
+window.db = { years:{}, lastYearId:null, archivedYearsMeta:[] };
 window.curYear = null;
 window.cur = null;
 window.activeBrushRole = "";
 window.historyModalStuId = null;
+window.dashSelectedClasses = new Set();
+window.batchMode = false;
+window.selectedIds = new Set();
 
 let currentView = 'dash';
 let toastTimer;
@@ -370,11 +532,7 @@ let fbApp = null, fbAuth = null, fbDb = null, unsubscribeSnapshot = null;
 
 function escapeHtml(str) {
   return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
 
@@ -417,8 +575,8 @@ async function initFirebase() {
           await signInAnonymously(fbAuth);
         } catch (authErr) {
           console.warn("Firebase Anonymous auth failed:", authErr);
-          firebaseLastError = `匿名驗證錯誤 (${authErr.code || authErr.message})：請至 Firebase 控制台 Authentication -> Sign-in method 啟用「匿名 (Anonymous)」登入。`;
-          updateSyncStatus('error', '🔴 請啟用匿名驗證');
+          firebaseLastError = `認證問題：${authErr.message || authErr.code}`;
+          updateSyncStatus('error', '🔴 認證失敗');
           renderDiagnostics();
           loadLocalFallback();
         }
@@ -442,7 +600,7 @@ function setupFirestoreListener() {
   unsubscribeSnapshot = onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
       isUpdatingFromRemote = true;
-      window.db = snapshot.data() || { years:{} };
+      window.db = snapshot.data() || { years:{}, archivedYearsMeta:[] };
       refreshActivePointers();
       renderHeaderSelects();
       if (currentView === 'dash') renderDashboard();
@@ -454,11 +612,11 @@ function setupFirestoreListener() {
       renderDiagnostics();
     } else {
       saveDB();
-      updateSyncStatus('connected', '🟢 Firebase 已建立初始檔');
+      updateSyncStatus('connected', '🟢 Firebase 初始檔已建立');
     }
   }, (err) => {
     console.error("Snapshot error:", err);
-    firebaseLastError = `Firestore 讀取失敗 (${err.code || err.message})：請確認 Firebase Console 中的 Firestore Rules 已設定為「allow read, write: if true;」。`;
+    firebaseLastError = `Firestore 權限錯誤：請確認 Firebase Console -> Firestore Database Rules 已改為 allow read, write: if true;`;
     updateSyncStatus('error', '🔴 同步權限受限');
     renderDiagnostics();
     loadLocalFallback();
@@ -472,25 +630,25 @@ function renderDiagnostics() {
   if (isLocalMode) {
     diagArea.innerHTML = `<div class="diag-card" style="background:#EDF2F7; border-color:#CBD5E1; color:#334155;">
       <h4>📴 目前為離線 / 本機儲存模式</h4>
-      <p>您的所有操作（加分、分組、座位）將完整儲存於目前瀏覽器中。如需跨裝置即時同步，請修復下方 Firebase 設定。</p>
+      <p>所有操作將儲存於此瀏覽器中。如需跨手機/電腦即時同步，請修復 Firebase 專案設定。</p>
     </div>`;
     return;
   }
 
   if (firebaseLastError) {
     diagArea.innerHTML = `<div class="diag-card">
-      <h4>🚨 連線問題診斷與排除建議：</h4>
+      <h4>🚨 連線問題與排除診斷：</h4>
       <div>${escapeHtml(firebaseLastError)}</div>
       <ol>
-        <li>開啟 <a href="https://console.firebase.google.com/" target="_blank" style="color:#C53030;">Firebase Console</a>。</li>
-        <li><strong>匿名登入：</strong>至 Build -> Authentication -> Sign-in method 啟用「匿名 (Anonymous)」。</li>
-        <li><strong>資料庫權限：</strong>至 Build -> Firestore Database -> Rules 將權限修改為 <code>allow read, write: if true;</code>。</li>
+        <li>點擊開啟 <a href="https://console.firebase.google.com/" target="_blank" style="color:#C53030;">Firebase Console</a>。</li>
+        <li><strong>匿名登入：</strong>至 Authentication -> Sign-in method -> 啟用「匿名 (Anonymous)」。</li>
+        <li><strong>資料庫權限：</strong>至 Firestore Database -> Rules 將權限改為 <code>allow read, write: if true;</code>。</li>
       </ol>
     </div>`;
   } else {
     diagArea.innerHTML = `<div class="diag-card" style="background:#F0FFF4; border-color:#38A169; color:#22543D;">
-      <h4>🟢 連線狀態良好！</h4>
-      <p>目前已成功與 Firebase 雲端資料庫雙向連線，所有變動毫秒級即時同步中。</p>
+      <h4>🟢 雲端同步正常運作中！</h4>
+      <p>跨裝置/手機毫秒級同步已生效。</p>
     </div>`;
   }
 }
@@ -505,7 +663,7 @@ async function saveDB() {
       await setDoc(docRef, JSON.parse(JSON.stringify(window.db)));
     } catch(err) {
       console.error("Cloud save failed:", err);
-      toast('雲端儲存失敗，已自動存至本機', true);
+      toast('雲端儲存失敗，已轉為存至本機', true);
     }
   }
 }
@@ -522,6 +680,8 @@ function loadLocalFallback() {
 
 function refreshActivePointers(){
   if(!db.years) db.years = {};
+  if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
+
   if(db.lastYearId && db.years[db.lastYearId]){
     curYear = db.years[db.lastYearId];
   } else {
@@ -541,9 +701,10 @@ function refreshActivePointers(){
   } else cur = null;
 
   if(cur){
-    if(!cur.groupConfig) cur.groupConfig = { value:4, algo:'random' };
+    if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random', useConstraints:false };
+    if(!cur.constraints) cur.constraints = [];
     if(!cur.studentScores) cur.studentScores = {};
-    if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6 };
+    if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6, layoutMode:'grid', podCols:3, podDeskLayout:'2x2' };
     if(!cur.studentRoles) cur.studentRoles = {};
     if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '小老師'];
   }
@@ -553,9 +714,18 @@ function allStudents(){ return cur ? [...(cur.boys||[]), ...(cur.girls||[])] : [
 function findStudent(id){ return allStudents().find(s=>s.id===id); }
 
 function getStudentScoreObj(stuId){
-  if(!cur) return {plusScore:0, scoreLog:[]};
-  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, scoreLog:[] };
-  return cur.studentScores[stuId];
+  if(!cur) return {plusScore:0, scoreLog:[], projectGrade:'作品', projectModifier:'無'};
+  if(!cur.studentScores[stuId]) cur.studentScores[stuId] = { plusScore: 0, scoreLog:[], projectGrade:'作品', projectModifier:'無', totalPlusLifetime:0, totalMinusLifetime:0 };
+  const sc = cur.studentScores[stuId];
+  if(!sc.scoreLog) sc.scoreLog = [];
+  return sc;
+}
+
+function logScoreChange(stuId, delta, reason){
+  const sc = getStudentScoreObj(stuId);
+  sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason: reason || (delta>=0 ? '課堂加分' : '課堂扣分') });
+  if(delta>=0) sc.totalPlusLifetime = (sc.totalPlusLifetime||0) + delta;
+  else sc.totalMinusLifetime = (sc.totalMinusLifetime||0) + delta;
 }
 
 function renderDashboard(){
@@ -578,11 +748,18 @@ function renderDashboard(){
         cIds.map(cId => {
           const cls = year.classes[cId];
           const totalCount = (cls.boys ? cls.boys.length : 0) + (cls.girls ? cls.girls.length : 0);
+          const isSelected = window.dashSelectedClasses.has(`${yId}|${cId}`);
+
           return `
-          <div class="class-overview-card">
+          <div class="class-overview-card ${isSelected ? 'selected' : ''}" data-yid="${yId}" data-cid="${cId}">
+            <div class="card-check"><input type="checkbox" ${isSelected ? 'checked' : ''}></div>
             <div class="card-content" onclick="window.enterClass('${yId}', '${cId}')">
               <h3>🏫 ${escapeHtml(year.name)} - ${escapeHtml(cls.name)}</h3>
-              <div class="meta">學生總人數：${totalCount} 人</div>
+              <div class="meta">學生人數：${totalCount} 人</div>
+              <div class="stats">
+                <span>📦 分組：${cls.groups ? cls.groups.length + '組' : '未分組'}</span>
+                <span>🪑 座位：${cls.seats ? '已排定' : '未排'}</span>
+              </div>
             </div>
           </div>`;
         }).join('');
@@ -590,14 +767,63 @@ function renderDashboard(){
       return `<div class="year-section">
         <div class="year-header">
           <h2>📁 ${escapeHtml(year.name)}</h2>
-          <button class="pill-btn small" onclick="window.dashNewClass('${yId}')">＋ 新增班級</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="pill-btn small" onclick="window.dashNewClass('${yId}')">＋ 新增班級</button>
+            <button class="pill-btn small" onclick="window.dashArchiveYear('${yId}')">🗄️ 封存學年</button>
+          </div>
         </div>
         <div class="dashboard-grid">${classesHtml}</div>
       </div>`;
     }).join('');
   }
   grid.innerHTML = html;
+  updateDashBatchToolbar();
 }
+
+document.getElementById('dashboardClassGrid').addEventListener('click', e => {
+  const checkWrap = e.target.closest('.card-check');
+  if(checkWrap){
+    e.stopPropagation();
+    const card = checkWrap.closest('.class-overview-card');
+    const key = `${card.dataset.yid}|${card.dataset.cid}`;
+    if(window.dashSelectedClasses.has(key)) window.dashSelectedClasses.delete(key);
+    else window.dashSelectedClasses.add(key);
+    renderDashboard(); 
+  }
+});
+
+function updateDashBatchToolbar(){
+  const n = window.dashSelectedClasses.size;
+  const bar = document.getElementById('dashBatchToolbar');
+  const countEl = document.getElementById('dashBatchCount');
+  if(!bar) return;
+  bar.classList.toggle('show', n > 0);
+  if(countEl) countEl.textContent = `已選 ${n} 個班級`;
+}
+
+document.getElementById('dashBatchClearBtn').addEventListener('click', ()=>{
+  window.dashSelectedClasses.clear();
+  renderDashboard();
+});
+
+document.getElementById('dashBatchDeleteBtn').addEventListener('click', ()=>{
+  const n = window.dashSelectedClasses.size;
+  if(n === 0) return;
+  if(!confirm(`確定要刪除選取的 ${n} 個班級嗎？此操作無法復原。`)) return;
+  
+  window.dashSelectedClasses.forEach(key => {
+    const [yId, cId] = key.split('|');
+    if(db.years[yId] && db.years[yId].classes[cId]){
+      delete db.years[yId].classes[cId];
+    }
+  });
+  window.dashSelectedClasses.clear();
+  refreshActivePointers();
+  saveDB();
+  renderHeaderSelects();
+  renderDashboard();
+  toast(`已刪除 ${n} 個班級`);
+});
 
 window.enterClass = function(yId, cId){
   db.lastYearId = yId; curYear = db.years[yId];
@@ -611,10 +837,28 @@ window.dashNewClass = function(yId){
   const targetYear = db.years[yId];
   if(!targetYear) return;
   const cId = uid();
-  targetYear.classes[cId] = { name: name.trim(), boys:[], girls:[], groupConfig:{value:4, algo:'random'}, seatConfig:{rows:5,cols:6}, studentScores:{}, studentRoles:{} };
+  targetYear.classes[cId] = { name: name.trim(), boys:[], girls:[], groupConfig:{sizeMode:'bySize', value:4, algo:'random'}, seatConfig:{rows:5,cols:6,layoutMode:'grid'}, studentScores:{}, studentRoles:{}, jobsList:['組長', '工具長', '材料長', '秘書長', '小老師'] };
   db.lastYearId = yId; curYear = targetYear;
   curYear.lastClassId = cId; cur = curYear.classes[cId];
   saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
+};
+
+window.dashArchiveYear = function(yId){
+  const targetYear = db.years[yId];
+  if(!targetYear) return;
+  if(!confirm(`確定要封存「${targetYear.name}」嗎？系統將自動匯出 JSON 檔案備份。`)) return;
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ archivedYear: targetYear }, null, 2));
+  const dl = document.createElement('a'); dl.href = dataStr; dl.download = `學年封存_${targetYear.name}.json`;
+  document.body.appendChild(dl); dl.click(); dl.remove();
+
+  if(!db.archivedYearsMeta) db.archivedYearsMeta = [];
+  db.archivedYearsMeta.push({ id: targetYear.id, name: targetYear.name, archivedAt: new Date().toLocaleString('zh-TW') });
+  delete db.years[yId];
+
+  refreshActivePointers();
+  saveDB(); renderHeaderSelects(); renderDashboard();
+  toast(`已封存「${targetYear.name}」`);
 };
 
 function renderHeaderSelects(){
@@ -647,8 +891,8 @@ function switchView(view){
   else if(view === 'score') renderScoreClassroom();
 }
 
-function getBaseSeatHtml(occ, idx, showScore = false){
-  if(!occ || !findStudent(occ.id)) return `<div class="seat empty" data-idx="${idx}">空位</div>`;
+function getBaseSeatHtml(occ, dropAttrs, showScore = false){
+  if(!occ || !findStudent(occ.id)) return `<div class="seat empty" ${dropAttrs}>空位</div>`;
   const s = findStudent(occ.id);
   const sc = getStudentScoreObj(s.id);
   const roles = cur.studentRoles[s.id] || [];
@@ -658,10 +902,13 @@ function getBaseSeatHtml(occ, idx, showScore = false){
 
   let controls = '';
   if(showScore){
-    const baseVal = Number(s.score) || 0;
-    const totalVal = baseVal + sc.plusScore;
-    controls = `<div class="score-control-box">
-      <span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong> (總:${totalVal})</span>
+    const gradeOpts = ['作品','A','B','C','D','E','假'].map(g=>`<option value="${g}" ${sc.projectGrade===g?'selected':''}>${g}</option>`).join('');
+    const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
+
+    controls = `
+    <div class="seat-score-row"><select class="grade-sel" data-stuid="${s.id}">${gradeOpts}</select><select class="mod-sel" data-stuid="${s.id}">${modOpts}</select></div>
+    <div class="score-control-box">
+      <span>今日: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
       <div class="score-control-btns">
         <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
         <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
@@ -670,7 +917,12 @@ function getBaseSeatHtml(occ, idx, showScore = false){
     </div>`;
   }
 
-  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'}" style="--scolor:${groupColorHex};" data-stuid="${s.id}" data-idx="${idx}" draggable="true">
+  const batchOn = !!window.batchMode;
+  const isSelected = batchOn && window.selectedIds.has(s.id);
+  const checkHtml = batchOn ? `<span class="seat-select-check">${isSelected?'✓':''}</span>` : '';
+
+  return `<div class="seat ${s.gender==='M'?'gender-m':'gender-f'} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''}" style="--scolor:${groupColorHex};" data-stuid="${s.id}" ${dropAttrs}>
+    ${checkHtml}
     ${roleHtml}
     <div class="seat-top-row">
       <span class="seat-name">${s.gender==='M'?'♂':'♀'} ${escapeHtml(s.name)}</span>
@@ -681,13 +933,22 @@ function getBaseSeatHtml(occ, idx, showScore = false){
   </div>`;
 }
 
-function bindSeatEvents(area, isScoreView){
+function bindSeatEvents(area, isPods, isScoreView){
   area.querySelectorAll('.seat').forEach(seatEl => {
     seatEl.addEventListener('click', (e) => {
-      if(e.target.tagName === 'BUTTON') return;
+      if(e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
       const id = seatEl.dataset.stuid;
-      if(!id || !window.activeBrushRole) return;
-      
+      if(!id) return;
+
+      if(window.batchMode){
+        const nowSelected = !window.selectedIds.has(id);
+        if(nowSelected) window.selectedIds.add(id); else window.selectedIds.delete(id);
+        seatEl.classList.toggle('batch-selected', nowSelected);
+        updateBatchToolbar();
+        return;
+      }
+
+      if(!window.activeBrushRole) return;
       if(!cur.studentRoles[id]) cur.studentRoles[id] = [];
       if(window.activeBrushRole === 'ERASER'){
         cur.studentRoles[id] = [];
@@ -705,23 +966,30 @@ function bindSeatEvents(area, isScoreView){
     });
 
     seatEl.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', seatEl.dataset.idx);
+      if(isPods) e.dataTransfer.setData('text/plain', JSON.stringify({ pod: seatEl.dataset.pod, desk: seatEl.dataset.desk }));
+      else e.dataTransfer.setData('text/plain', seatEl.dataset.idx);
     });
-    seatEl.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      seatEl.classList.add('drag-over');
-    });
+    seatEl.addEventListener('dragover', (e) => { e.preventDefault(); seatEl.classList.add('drag-over'); });
     seatEl.addEventListener('dragleave', () => seatEl.classList.remove('drag-over'));
     seatEl.addEventListener('drop', (e) => {
       e.preventDefault();
       seatEl.classList.remove('drag-over');
-      const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-      const toIdx = Number(seatEl.dataset.idx);
-      if(isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
-      
-      const tmp = cur.seats[fromIdx];
-      cur.seats[fromIdx] = cur.seats[toIdx];
-      cur.seats[toIdx] = tmp;
+      if(isPods){
+        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+        const p1 = Number(from.pod), d1 = Number(from.desk);
+        const p2 = Number(seatEl.dataset.pod), d2 = Number(seatEl.dataset.desk);
+        if(p1===p2 && d1===d2) return;
+        const tmp = cur.seats[p1].desks[d1];
+        cur.seats[p1].desks[d1] = cur.seats[p2].desks[d2];
+        cur.seats[p2].desks[d2] = tmp;
+      } else {
+        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+        const toIdx = Number(seatEl.dataset.idx);
+        if(isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+        const tmp = cur.seats[fromIdx];
+        cur.seats[fromIdx] = cur.seats[toIdx];
+        cur.seats[toIdx] = tmp;
+      }
       saveDB();
       if(isScoreView) renderScoreSeats(); else renderConfigSeats();
     });
@@ -733,8 +1001,14 @@ function renderConfigSeats(){
   const area = document.getElementById('seatArea');
   if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
 
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, i, false)).join('')}</div>`;
-  bindSeatEvents(area, false);
+  if(cur.seatConfig.layoutMode === 'pods'){
+    const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols||3}, auto);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map((o, dIdx) => getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
+    bindSeatEvents(area, true, false);
+  } else {
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, `draggable="true" data-idx="${i}"`, false)).join('')}</div>`;
+    bindSeatEvents(area, false, false);
+  }
 }
 
 function renderScoreSeats(){
@@ -742,8 +1016,20 @@ function renderScoreSeats(){
   const area = document.getElementById('scoreSeatArea');
   if(!cur.seats){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
 
-  area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, i, true)).join('')}</div>`;
-  bindSeatEvents(area, true);
+  if(cur.seatConfig.layoutMode === 'pods'){
+    const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${cur.seatConfig.podCols||3}, auto);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[pod.podId % GROUP_COLORS.length]};">第 ${pod.podId+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, 116px);">${pod.desks.map((o, dIdx) => getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
+    bindSeatEvents(area, true, true);
+  } else {
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols}, 148px);">${cur.seats.map((o, i) => getBaseSeatHtml(o, `draggable="true" data-idx="${i}"`, true)).join('')}</div>`;
+    bindSeatEvents(area, false, true);
+  }
+
+  area.querySelectorAll('.grade-sel, .mod-sel').forEach(sel=> sel.addEventListener('change', ()=>{
+    const sc = getStudentScoreObj(sel.dataset.stuid);
+    if(sel.classList.contains('grade-sel')) sc.projectGrade = sel.value; else sc.projectModifier = sel.value;
+    saveDB();
+  }));
 
   area.querySelectorAll('.score-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -758,8 +1044,7 @@ function renderScoreSeats(){
 
       const dir = Number(btn.dataset.dir);
       sc.plusScore += dir;
-      if(!sc.scoreLog) sc.scoreLog = [];
-      sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta: dir, reason: dir >= 0 ? '課堂加分' : '課堂扣分' });
+      logScoreChange(id, dir, dir >= 0 ? '課堂加分' : '課堂扣分');
       saveDB();
       renderScoreSeats();
     });
@@ -798,8 +1083,7 @@ document.getElementById('addManualLogBtn').addEventListener('click', ()=>{
   const reason = prompt('請輸入原因（選填）：', '') || '';
   const sc = getStudentScoreObj(stuId);
   sc.plusScore += delta;
-  if(!sc.scoreLog) sc.scoreLog = [];
-  sc.scoreLog.push({ t: new Date().toLocaleString('zh-TW'), delta, reason });
+  logScoreChange(stuId, delta, reason);
   saveDB(); renderHistoryLog();
   if(currentView==='score') renderScoreSeats();
 });
@@ -811,7 +1095,11 @@ function renderConfigClassroom(){
   document.getElementById('classNameInput').value = cur.name;
   document.getElementById('captureClassTitle').textContent = `🏫 ${curYear.name}・${cur.name} 座位表`;
   renderRosterTables();
+  renderJobChips();
   renderBrushBtns();
+  renderConstraintSelects();
+  renderConstraintChips();
+  renderGroups();
   renderConfigSeats();
 }
 
@@ -826,7 +1114,7 @@ function renderScoreClassroom(){
 function renderBrushBtns(){
   if(!cur) return;
   const jobs = cur.jobsList || ['組長', '工具長', '材料長', '秘書長', '小老師'];
-  const html = `<button class="brush-btn ${window.activeBrushRole===''?'active':''}" data-role="">無刷子 (拖曳位子)</button>` +
+  const html = `<button class="brush-btn ${window.activeBrushRole===''?'active':''}" data-role="">無刷子 (拖曳)</button>` +
     jobs.map(j => `<button class="brush-btn ${window.activeBrushRole===j?'active':''}" data-role="${escapeHtml(j)}">🏷️ ${escapeHtml(j)}</button>`).join('') +
     `<button class="brush-btn eraser ${window.activeBrushRole==='ERASER'?'active':''}" data-role="ERASER">🧹 清除角色</button>`;
 
@@ -843,6 +1131,25 @@ function renderBrushBtns(){
   });
 }
 
+function renderJobChips(){
+  if(!cur) return;
+  document.getElementById('jobChips').innerHTML = (cur.jobsList||[]).map((job,i)=>`<span class="chip">${escapeHtml(job)}<button data-i="${i}">✕</button></span>`).join('');
+  document.querySelectorAll('#jobChips button').forEach(btn=> btn.addEventListener('click', ()=>{
+    cur.jobsList.splice(Number(btn.dataset.i), 1);
+    saveDB(); renderJobChips(); renderBrushBtns();
+  }));
+}
+
+document.getElementById('addJobBtn').addEventListener('click', ()=>{
+  if(!cur) return;
+  const val = document.getElementById('newJobInput').value.trim();
+  if(!val) return;
+  if(!cur.jobsList) cur.jobsList = [];
+  if(!cur.jobsList.includes(val)) cur.jobsList.push(val);
+  document.getElementById('newJobInput').value = '';
+  saveDB(); renderJobChips(); renderBrushBtns();
+});
+
 function parseRosterText(text, gender){
   return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
     let parts = line.split(/[,，\s\t]+/);
@@ -857,94 +1164,217 @@ function renderRosterTables(){
   if(!cur) return;
   const rT = (id, list) => {
     const tbody = document.querySelector(`#${id} tbody`);
-    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td>${escapeHtml(s.seatNo)}</td><td>${escapeHtml(s.name)}</td><td>${s.score!==null&&s.score!==undefined?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
+    tbody.innerHTML = list.map(s=>`<tr data-id="${s.id}"><td contenteditable="true" data-field="seatNo">${escapeHtml(s.seatNo)}</td><td contenteditable="true" data-field="name">${escapeHtml(s.name)}</td><td contenteditable="true" data-field="score">${s.score!==null&&s.score!==undefined?s.score:''}</td><td><button class="rm">✕</button></td></tr>`).join('') || `<tr><td colspan="4">無資料</td></tr>`;
+    tbody.querySelectorAll('td[contenteditable]').forEach(td=> td.addEventListener('blur', ()=>{
+      const s = list.find(x=>x.id===td.closest('tr').dataset.id);
+      if(s){
+        const field = td.dataset.field;
+        let val = td.textContent.trim();
+        if(field==='score') s.score = val===''? null : (isNaN(Number(val))? s.score : Number(val));
+        else s[field] = val;
+        saveDB();
+      }
+    }));
     tbody.querySelectorAll('.rm').forEach(btn=> btn.addEventListener('click', ()=>{
       const idx = list.findIndex(x=>x.id===btn.closest('tr').dataset.id);
-      if(idx>-1){ list.splice(idx,1); saveDB(); renderRosterTables(); }
+      if(idx>-1){ list.splice(idx,1); saveDB(); renderRosterTables(); renderConstraintSelects(); }
     }));
   };
   rT('boysTable', cur.boys || []); rT('girlsTable', cur.girls || []);
 }
 
-document.getElementById('importFileBtn').addEventListener('click', () => {
-  document.getElementById('importFileInput').click();
-});
+document.getElementById('addBoyBtn').addEventListener('click', ()=>{ if(cur){ cur.boys.push({ id:'M_'+uid(), seatNo:'', name:'新男生', score:null, gender:'M' }); saveDB(); renderRosterTables(); renderConstraintSelects(); } });
+document.getElementById('addGirlBtn').addEventListener('click', ()=>{ if(cur){ cur.girls.push({ id:'F_'+uid(), seatNo:'', name:'新女生', score:null, gender:'F' }); saveDB(); renderRosterTables(); renderConstraintSelects(); } });
 
+document.getElementById('importFileBtn').addEventListener('click', () => { document.getElementById('importFileInput').click(); });
 document.getElementById('importFileInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file || !cur) return;
-
+  const file = e.target.files[0]; if (!file || !cur) return;
   const reader = new FileReader();
   reader.onload = (evt) => {
     try {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      if (jsonData.length < 2) return;
 
-      if (jsonData.length < 2) {
-        toast('檔案內無有效的學生資料', true);
-        return;
-      }
-
-      // Detect header index
-      let seatCol = -1, nameCol = -1, genderCol = -1, scoreCol = -1;
-      const headers = jsonData[0].map(h => String(h || '').trim());
-
-      headers.forEach((h, idx) => {
-        if (/座號|編號|no/i.test(h)) seatCol = idx;
-        else if (/姓名|名字|name/i.test(h)) nameCol = idx;
-        else if (/性別|gender/i.test(h)) genderCol = idx;
-        else if (/原始|分數|成績|score/i.test(h)) scoreCol = idx;
-      });
-
-      // Fallback col mapping if headers are missing
-      if (nameCol === -1) nameCol = 1;
-      if (seatCol === -1) seatCol = 0;
-
-      let importedBoys = [];
-      let importedGirls = [];
+      let seatCol = 0, nameCol = 1, genderCol = 2, scoreCol = 3;
+      let importedBoys = [], importedGirls = [];
 
       for (let i = 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row || row.length === 0) continue;
-
-        const name = String(row[nameCol] || '').trim();
-        if (!name) continue;
-
+        const row = jsonData[i]; if (!row || !row[nameCol]) continue;
+        const name = String(row[nameCol]).trim();
         const seatNo = String(row[seatCol] || '').trim();
-        const genderRaw = String(genderCol >= 0 ? row[genderCol] || '' : '').trim();
-        const scoreVal = scoreCol >= 0 && row[scoreCol] !== undefined ? Number(row[scoreCol]) : null;
-
-        const isFemale = /女|F|female/i.test(genderRaw);
-        const gender = isFemale ? 'F' : 'M';
-
-        const stu = {
-          id: gender + '_' + uid(),
-          seatNo,
-          name,
-          score: isNaN(scoreVal) ? null : scoreVal,
-          gender
-        };
-
-        if (gender === 'F') importedGirls.push(stu);
-        else importedBoys.push(stu);
+        const genderRaw = String(row[genderCol] || '').trim();
+        const scoreVal = row[scoreCol] !== undefined ? Number(row[scoreCol]) : null;
+        const gender = /女|F|female/i.test(genderRaw) ? 'F' : 'M';
+        const stu = { id: gender + '_' + uid(), seatNo, name, score: isNaN(scoreVal) ? null : scoreVal, gender };
+        if (gender === 'F') importedGirls.push(stu); else importedBoys.push(stu);
       }
-
       cur.boys = (cur.boys || []).concat(importedBoys);
       cur.girls = (cur.girls || []).concat(importedGirls);
-
-      saveDB();
-      renderRosterTables();
-      toast(`成功匯入 ${importedBoys.length + importedGirls.length} 位學生！`);
-    } catch (err) {
-      console.error("Import error:", err);
-      toast('檔案解析失敗，請確認是否為標準 Excel/CSV', true);
-    }
+      saveDB(); renderRosterTables(); renderConstraintSelects(); toast(`成功匯入 ${importedBoys.length + importedGirls.length} 位學生！`);
+    } catch (err) { toast('檔案解析失敗', true); }
   };
   reader.readAsArrayBuffer(file);
-  e.target.value = ''; // Reset input
+});
+
+document.getElementById('useConstraintsToggle').addEventListener('change', (e)=>{
+  if(!cur) return;
+  cur.groupConfig.useConstraints = e.target.checked;
+  document.getElementById('constraintPanel').style.display = e.target.checked ? 'block' : 'none';
+  saveDB();
+});
+
+function renderConstraintSelects(){
+  const students = allStudents();
+  const opts = students.map(s=>`<option value="${s.id}">${escapeHtml(s.gender==='M'?'♂':'♀')} ${escapeHtml(s.name)}</option>`).join('');
+  document.getElementById('constraintA').innerHTML = opts || '<option value="">無學生</option>';
+  document.getElementById('constraintB').innerHTML = opts || '<option value="">無學生</option>';
+}
+
+document.getElementById('addConstraintBtn').addEventListener('click', ()=>{
+  if(!cur) return;
+  const a = document.getElementById('constraintA').value;
+  const b = document.getElementById('constraintB').value;
+  if(!a || !b || a===b){ toast('請選擇兩位不同的學生', true); return; }
+  if(!cur.constraints) cur.constraints = [];
+  cur.constraints.push([a, b]);
+  saveDB(); renderConstraintChips();
+});
+
+function renderConstraintChips(){
+  if(!cur) return;
+  const wrap = document.getElementById('constraintChips');
+  wrap.innerHTML = (cur.constraints||[]).map((pair, i)=>{
+    const sa = findStudent(pair[0]), sb = findStudent(pair[1]);
+    return `<span class="chip">${escapeHtml(sa?sa.name:'?')} × ${escapeHtml(sb?sb.name:'?')}<button data-i="${i}">✕</button></span>`;
+  }).join('');
+  wrap.querySelectorAll('button').forEach(btn=> btn.addEventListener('click', ()=>{
+    cur.constraints.splice(Number(btn.dataset.i), 1);
+    saveDB(); renderConstraintChips();
+  }));
+}
+
+document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
+  if(!cur) return;
+  const stus = allStudents();
+  if(stus.length===0){ toast('請先輸入學生名單', true); return; }
+  
+  const size = cur.groupConfig.value || 4;
+  const numGroups = cur.groupConfig.sizeMode === 'byCount' ? size : Math.ceil(stus.length / size);
+  const groups = Array.from({length: numGroups}, (_, i) => ({ id: i, members: [] }));
+  
+  stus.forEach((s, i) => groups[i % numGroups].members.push(s.id));
+  cur.groups = groups; saveDB(); renderGroups(); toast('自動分組完成');
+});
+
+function renderGroups(){
+  if(!cur) return;
+  const wrap = document.getElementById('groupsResult');
+  if(!cur.groups){ wrap.innerHTML = `<div class="empty-hint">尚未產生分組。</div>`; return; }
+
+  const groupOptions = cur.groups.map(g=>`<option value="${g.id}">第 ${g.id+1} 組</option>`).join('');
+  wrap.innerHTML = `<div class="groups-grid">` + cur.groups.map(g=>{
+    const members = g.members.map(id=>findStudent(id)).filter(Boolean);
+    return `<div class="group-card">
+      <div class="gh" style="--gcolor:${GROUP_COLORS[g.id % GROUP_COLORS.length]};"><span>第 ${g.id+1} 組</span><span>${members.length}人</span></div>
+      <ul>${members.map(m=>`<li><span>${m.gender==='M'?'♂':'♀'} ${escapeHtml(m.name)}</span><select class="move-sel" data-id="${m.id}">${groupOptions}</select></li>`).join('')}</ul>
+    </div>`;
+  }).join('') + `</div>`;
+
+  wrap.querySelectorAll('.move-sel').forEach(sel=>{
+    sel.value = cur.groups.findIndex(g=>g.members.includes(sel.dataset.id));
+    sel.addEventListener('change', ()=>{
+      const targetGi = Number(sel.value), id = sel.dataset.id, fromGi = cur.groups.findIndex(g=>g.members.includes(id));
+      if(fromGi!==targetGi){
+        cur.groups[fromGi].members = cur.groups[fromGi].members.filter(x=>x!==id);
+        cur.groups[targetGi].members.push(id);
+        saveDB(); renderGroups(); renderConfigSeats();
+      }
+    });
+  });
+}
+
+document.getElementById('seatLayoutModeToggle').addEventListener('click', e=>{
+  if(!cur) return;
+  const btn = e.target.closest('button'); if(!btn) return;
+  cur.seatConfig.layoutMode = btn.dataset.mode;
+  document.querySelectorAll('#seatLayoutModeToggle button').forEach(b=>b.classList.toggle('active', b===btn));
+  document.getElementById('gridSeatControls').style.display = cur.seatConfig.layoutMode==='grid'?'flex':'none';
+  document.getElementById('podSeatControls').style.display = cur.seatConfig.layoutMode==='pods'?'block':'none';
+  saveDB();
+});
+
+document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
+  if(!cur || !cur.groups){ toast('請先完成自動分組', true); return; }
+  if(cur.seatConfig.layoutMode === 'pods'){
+    const desksPerPod = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[0]) * Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    cur.seats = cur.groups.map(g=>{
+      const podDesks = Array(desksPerPod).fill(null);
+      g.members.forEach((memId, mIdx)=>{ if(mIdx<desksPerPod) podDesks[mIdx] = {id:memId, groupId:g.id}; });
+      return { podId: g.id, desks: podDesks };
+    });
+  } else {
+    const seats = [];
+    cur.groups.forEach(g => {
+      g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
+    });
+    cur.seats = seats;
+  }
+  saveDB(); renderConfigSeats(); toast('座位排定！可拖曳卡片互換位置');
+});
+
+function setBatchMode(on){
+  window.batchMode = on;
+  if(!on) window.selectedIds.clear();
+  document.getElementById('configBatchModeToggle').checked = on;
+  document.getElementById('scoreBatchModeToggle').checked = on;
+  updateBatchToolbar();
+  if(currentView==='config') renderConfigSeats(); else if(currentView==='score') renderScoreSeats();
+}
+
+function updateBatchToolbar(){
+  const n = window.selectedIds.size;
+  ['config','score'].forEach(prefix=>{
+    const bar = document.getElementById(prefix+'BatchToolbar');
+    const countEl = document.getElementById(prefix+'BatchCount');
+    if(bar) bar.classList.toggle('show', window.batchMode && n>0);
+    if(countEl) countEl.textContent = `已選 ${n} 位`;
+  });
+}
+
+function batchApplyBrush(){
+  if(!cur || window.selectedIds.size===0) return;
+  window.selectedIds.forEach(id=>{
+    if(!cur.studentRoles[id]) cur.studentRoles[id]=[];
+    if(window.activeBrushRole==='ERASER') cur.studentRoles[id]=[];
+    else if(window.activeBrushRole && !cur.studentRoles[id].includes(window.activeBrushRole)) cur.studentRoles[id].push(window.activeBrushRole);
+  });
+  saveDB();
+  if(currentView==='config') renderConfigSeats(); else if(currentView==='score') renderScoreSeats();
+  toast(`已套用角色至 ${window.selectedIds.size} 位學生`);
+}
+
+document.getElementById('configBatchModeToggle').addEventListener('change', e=> setBatchMode(e.target.checked));
+document.getElementById('scoreBatchModeToggle').addEventListener('change', e=> setBatchMode(e.target.checked));
+document.getElementById('configBatchApplyBrush').addEventListener('click', batchApplyBrush);
+document.getElementById('scoreBatchApplyBrush').addEventListener('click', batchApplyBrush);
+document.getElementById('configBatchClearSel').addEventListener('click', ()=> { window.selectedIds.clear(); updateBatchToolbar(); renderConfigSeats(); });
+document.getElementById('scoreBatchClearSel').addEventListener('click', ()=> { window.selectedIds.clear(); updateBatchToolbar(); renderScoreSeats(); });
+
+document.getElementById('scoreBatchPlus').addEventListener('click', ()=>{
+  if(!cur || window.selectedIds.size===0) return;
+  const deltaStr = prompt(`為選取的 ${window.selectedIds.size} 位學生調整分數（可輸入負數）：`, '1');
+  if(!deltaStr) return;
+  const delta = Number(deltaStr); if(isNaN(delta) || delta===0) return;
+  const reason = prompt('請輸入加扣分原因（選填）：', '') || '';
+  window.selectedIds.forEach(id=>{
+    const sc = getStudentScoreObj(id);
+    sc.plusScore += delta;
+    logScoreChange(id, delta, reason);
+  });
+  saveDB(); renderScoreSeats(); toast('批次加扣分完成！');
 });
 
 document.getElementById('goDashboardBtn').addEventListener('click', ()=> switchView('dash'));
@@ -955,28 +1385,19 @@ document.getElementById('backToConfigBtn').addEventListener('click', ()=> switch
 document.getElementById('yearSelect').addEventListener('change', (e) => {
   const yId = e.target.value;
   if (db.years[yId]) {
-    db.lastYearId = yId;
-    curYear = db.years[yId];
-    const cIds = Object.keys(curYear.classes || {});
-    curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
-    cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
-    saveDB();
-    renderHeaderSelects();
-    if (currentView === 'config') renderConfigClassroom();
-    else if (currentView === 'score') renderScoreClassroom();
-    else renderDashboard();
+    db.lastYearId = yId; curYear = db.years[yId];
+    refreshActivePointers();
+    saveDB(); renderHeaderSelects();
+    switchView(currentView);
   }
 });
 
 document.getElementById('classSelect').addEventListener('change', (e) => {
   const cId = e.target.value;
   if (curYear && curYear.classes[cId]) {
-    curYear.lastClassId = cId;
-    cur = curYear.classes[cId];
-    saveDB();
-    renderHeaderSelects();
-    if (currentView === 'config') renderConfigClassroom();
-    else if (currentView === 'score') renderScoreClassroom();
+    curYear.lastClassId = cId; cur = curYear.classes[cId];
+    saveDB(); renderHeaderSelects();
+    switchView(currentView);
   }
 });
 
@@ -985,7 +1406,6 @@ document.getElementById('incGroupSizeBtn').addEventListener('click', ()=>{ if(cu
 
 document.getElementById('decRowsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = Math.max(1, (cur.seatConfig.rows||5)-1); document.getElementById('rowsVal').textContent = cur.seatConfig.rows; saveDB(); } });
 document.getElementById('incRowsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = (cur.seatConfig.rows||5)+1; document.getElementById('rowsVal').textContent = cur.seatConfig.rows; saveDB(); } });
-
 document.getElementById('decColsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = Math.max(1, (cur.seatConfig.cols||6)-1); document.getElementById('colsVal').textContent = cur.seatConfig.cols; saveDB(); } });
 document.getElementById('incColsBtn').addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = (cur.seatConfig.cols||6)+1; document.getElementById('colsVal').textContent = cur.seatConfig.cols; saveDB(); } });
 
@@ -997,42 +1417,21 @@ document.getElementById('newYearBtn').addEventListener('click', ()=>{
   saveDB(); renderHeaderSelects(); switchView('dash'); toast('已建立新學年度');
 });
 
+document.getElementById('archiveListBtn').addEventListener('click', ()=>{
+  const wrap = document.getElementById('archiveListWrap');
+  const list = db.archivedYearsMeta || [];
+  wrap.innerHTML = list.length===0 ? '<div class="empty-hint">目前沒有已封存的學年度。</div>' : list.map((m,i)=>`<div class="archive-item"><div><strong>🗄️ ${escapeHtml(m.name)}</strong><br><small>${m.archivedAt}</small></div></div>`).join('');
+  document.getElementById('archiveListModal').style.display = 'flex';
+});
+document.getElementById('archiveListCloseBtn').addEventListener('click', ()=> document.getElementById('archiveListModal').style.display='none');
+
 document.getElementById('loadRosterBtn').addEventListener('click', ()=>{
   if(!cur) return;
   const b = parseRosterText(document.getElementById('boysInput').value,'M');
   const g = parseRosterText(document.getElementById('girlsInput').value,'F');
   cur.boys = (cur.boys||[]).concat(b); cur.girls = (cur.girls||[]).concat(g);
   document.getElementById('boysInput').value=''; document.getElementById('girlsInput').value='';
-  saveDB(); renderRosterTables(); toast('已載入學生名單');
-});
-
-document.getElementById('genGroupsBtn').addEventListener('click', ()=>{
-  if(!cur) return;
-  const stus = allStudents();
-  if(stus.length===0){ toast('請先輸入學生名單', true); return; }
-  const size = cur.groupConfig.value || 4;
-  const numGroups = Math.ceil(stus.length / size);
-  const groups = Array.from({length: numGroups}, (_, i) => ({ id: i, members: [] }));
-  
-  stus.forEach((s, i) => groups[i % numGroups].members.push(s.id));
-  cur.groups = groups; saveDB(); toast('自動分組完成');
-  
-  const resArea = document.getElementById('groupsResult');
-  resArea.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.8rem;">` +
-    groups.map(g => `<div style="border:2px solid var(--ink); border-radius:10px; padding:0.6rem; background:var(--paper-deep);">
-      <div style="font-weight:800; font-size:0.85rem; margin-bottom:0.4rem;">第 ${g.id+1} 組 (${g.members.length}人)</div>
-      <div style="font-size:0.8rem; color:var(--ink-soft);">${g.members.map(id => findStudent(id)?.name).join('、')}</div>
-    </div>`).join('') + `</div>`;
-});
-
-document.getElementById('genSeatsBtn').addEventListener('click', ()=>{
-  if(!cur || !cur.groups){ toast('請先完成自動分組', true); return; }
-  const seats = [];
-  cur.groups.forEach(g => {
-    g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
-  });
-  cur.seats = seats;
-  saveDB(); renderConfigSeats(); toast('座位排定！可拖曳卡片互換位置');
+  saveDB(); renderRosterTables(); renderConstraintSelects(); toast('已載入學生名單');
 });
 
 document.getElementById('firebaseStatusBadge').addEventListener('click', ()=>{
@@ -1067,9 +1466,7 @@ document.getElementById('saveFbConfigBtn').addEventListener('click', ()=>{
     document.getElementById('firebaseModal').style.display = 'none';
     toast('已儲存設定，正在嘗試連線...');
     initFirebase();
-  } catch(e) {
-    toast('Config 格式不正確', true);
-  }
+  } catch(e) { toast('Config 格式不正確', true); }
 });
 
 document.getElementById('clearFbConfigBtn').addEventListener('click', ()=>{
@@ -1080,18 +1477,39 @@ document.getElementById('clearFbConfigBtn').addEventListener('click', ()=>{
   initFirebase();
 });
 
+document.getElementById('cloudBackupBtn').addEventListener('click', ()=>{
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+  const dl = document.createElement('a'); dl.href = dataStr; dl.download = `classroom_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(dl); dl.click(); dl.remove(); toast('已下載備份 JSON 檔案！');
+});
+
+document.getElementById('cloudRestoreBtn').addEventListener('click', ()=> document.getElementById('cloudRestoreFile').click());
+document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const imported = JSON.parse(evt.target.result);
+      if(imported && imported.years){
+        db = imported; refreshActivePointers(); saveDB(); renderHeaderSelects(); switchView('dash'); document.getElementById('firebaseModal').style.display = 'none'; toast('成功還原資料！');
+      }
+    }catch(err){ toast('讀取檔案失敗', true); }
+  };
+  reader.readAsText(file);
+});
+
 document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
   if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
   try{
     const dateStr = new Date().toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}).replace('/','-');
-    const aoa = [['座號','姓名','性別','工作角色','原始分數',`${dateStr} 今日加分`,'總分']];
+    const aoa = [['座號','姓名','性別','工作角色','原始分數',`${dateStr} 今日加分`,`${dateStr} 今日作品評級`,'總加分','總分']];
     allStudents().forEach(s=>{
       const sc = getStudentScoreObj(s.id);
       const roles = (cur.studentRoles[s.id]||[]).join('、');
       const baseScore = Number(s.score) || 0;
       const plusScore = Number(sc.plusScore) || 0;
       const totalScore = baseScore + plusScore;
-      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, baseScore, plusScore, totalScore ]);
+      aoa.push([ s.seatNo, s.name, s.gender==='M'?'男':'女', roles, baseScore, plusScore, `${sc.projectGrade}${sc.projectModifier==='無'?'':sc.projectModifier}`, sc.totalPlusLifetime||0, totalScore ]);
     });
     const wb = XLSX.utils.book_new(); 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '成績總表');
