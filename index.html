@@ -1187,9 +1187,9 @@ document.getElementById('cloudRestoreFile').addEventListener('change', e=>{
     try{
       const imported = JSON.parse(evt.target.result);
       if(imported && imported.years){
-        // 修正點：必須先將讀取到的資料存入瀏覽器本機儲存空間
-        storage.set('sgh_db_v15', JSON.stringify(imported)); 
-        loadDB(); // 這樣 loadDB 才會讀到新的資料
+        // 【修正：強制將讀取到的檔案資料寫入瀏覽器暫存，再呼叫 loadDB】
+        storage.set('sgh_db_v15', JSON.stringify(imported));
+        loadDB(); // 復用初始化邏輯以設定狀態
         saveDB(); renderHeaderSelects(); switchView('dash'); modal.style.display = 'none'; toast('成功還原資料！');
       } else { toast('檔案格式不正確'); }
     }catch(err){ toast('讀取檔案失敗'); }
