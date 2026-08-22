@@ -1277,6 +1277,46 @@ function renderConfigSeats(){
   }
 }
 
+/*
+ * 加分面板採「老師視角」顯示：
+ * 原座位表的講台在上方，是給學生看較直覺的排列；
+ * 老師站在講台往學生方向看時，左右會是鏡射的。
+ *
+ * 注意：只鏡射「加分面板的顯示順序」，不修改 cur.seats 原始座位資料，
+ * 因此設定頁、拖曳換位、儲存資料與 Excel 匯出都不會被影響。
+ */
+function getMirroredGridSeatsForScore(){
+  const cols = Number(cur.seatConfig?.cols) || 6;
+  const seats = Array.isArray(cur.seats) ? cur.seats : [];
+  const mirrored = [];
+
+  for(let start = 0; start < seats.length; start += cols){
+    mirrored.push(...seats.slice(start, start + cols).reverse());
+  }
+  return mirrored;
+}
+
+function getMirroredPodsForScore(){
+  const podColCount = Number(cur.seatConfig?.podCols) || 3;
+  const pods = Array.isArray(cur.seats) ? cur.seats : [];
+  const mirrored = [];
+
+  // 先將島嶼的左右位置鏡射；每個島內的桌位也同步左右鏡射。
+  for(let start = 0; start < pods.length; start += podColCount){
+    const row = pods.slice(start, start + podColCount).reverse();
+    row.forEach(pod => {
+      if(pod && Array.isArray(pod.desks)){
+        pod = {
+          ...pod,
+          desks: pod.desks.slice().reverse()
+        };
+      }
+      mirrored.push(pod);
+    });
+  }
+  return mirrored;
+}
+
 function renderScoreSeats(){
   if(!cur) return;
   const area = document.getElementById('scoreSeatArea');
@@ -1290,10 +1330,13 @@ function renderScoreSeats(){
   if(isPodsMode){
     const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
     const podColCount = Number(cur.seatConfig.podCols) || 3;
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
+    const mirroredPods = getMirroredPodsForScore();
+
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${mirroredPods.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
     bindSeatEvents(area, true, true);
   } else {
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, true)).join('')}</div>`;
+    const mirroredSeats = getMirroredGridSeatsForScore();
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${mirroredSeats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, true)).join('')}</div>`;
     bindSeatEvents(area, false, true);
   }
 
