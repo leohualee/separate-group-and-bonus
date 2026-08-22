@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統</title>
+<title>分組座位與即時計分系統 (全功能修復完整版)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -152,6 +152,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 .pods-grid .pod-head { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.9rem; padding:0.25rem 0.75rem; border-radius:8px; background:var(--pcolor,var(--mint)); margin-bottom:0.7rem; display:inline-block; border:1.5px solid var(--ink); }
 .pods-grid .pod-desks { display:grid; gap:0.7rem; }
 
+/* 座位卡片通用樣式 */
 .seat {
   width: 100%;
   min-width: 140px;
@@ -528,6 +529,9 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
       <div>
         <button class="pill-btn" id="backToConfigBtn">⬅️ 返回分組與座位設定</button>
         <h2 id="scoreViewTitle" style="margin-top:0.6rem; font-size:1.8rem;">即時加分與計分面板</h2>
+      </div>
+      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <button class="pill-btn danger" id="resetTodayScoresBtn" style="font-size:0.95rem; padding:0.6rem 1.2rem;">🔄 今日加分歸零</button>
       </div>
     </div>
 
@@ -1726,6 +1730,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  /* 手動「今日加分歸零」按鈕功能 */
+  document.getElementById('resetTodayScoresBtn')?.addEventListener('click', () => {
+    if (!cur) return;
+    showConfirmModal(
+      '🔄 今日加分歸零確認',
+      `確定要將「${escapeHtml(cur.name)}」所有學生的「今日加分」與「今日作品評級」重置歸零嗎？（累積總分與歷史紀錄將完整保留）`,
+      '確定歸零',
+      true,
+      () => {
+        const stus = allStudents();
+        stus.forEach(s => {
+          const sc = getStudentScoreObj(s.id);
+          sc.plusScore = 0;
+          sc.projectGrade = '作品';
+          sc.projectModifier = '無';
+        });
+        cur.lastDate = new Date().toLocaleDateString('zh-TW');
+        saveDB();
+        renderScoreSeats();
+        toast('已成功將今日加分重置歸零！');
+      }
+    );
+  });
+
   document.getElementById('historyLogCloseBtn')?.addEventListener('click', () => {
     const modal = document.getElementById('historyLogModal');
     if(modal) modal.style.display = 'none';
@@ -2221,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dateList.push(todayStr);
       }
 
-      const header = ['組別', '座號', '姓名', '性別', '工作角色', '原始分數', ...dateList.map(d => `${d} 加分`), '作品評級', '總加分', '總分數'];
+      const header = ['組別', '座號', '姓名', '性別', '工作角色', '原始分數', ...dateList.map(d => `${d} 加分`), '作品評級', '今日加分', '累計加分', '總分'];
       
       const sortedStus = stus.slice().sort((a, b) => {
         const gA = stuGroupMap[a.id] || '未分組';
@@ -2241,15 +2269,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupName = stuGroupMap[s.id] || '未分組';
         const roles = (cur.studentRoles[s.id] || []).join('、');
         const baseScore = (s.score !== null && s.score !== undefined) ? Number(s.score) : 0;
-        const totalPlus = Number(sc.plusScore) || 0;
-        const finalScore = baseScore + totalPlus;
+        
+        // 今日加分直接使用網頁端 plusScore (若歸零，則精確為 0)
+        const todaysPlus = Number(sc.plusScore) || 0;
+        const totalPlus = Number(sc.totalPlusLifetime) || 0;
+        const totalMinus = Number(sc.totalMinusLifetime) || 0;
+        const finalScore = baseScore + totalPlus + totalMinus;
         
         let projectEval = `${sc.projectGrade || '作品'}`;
         if (sc.projectModifier && sc.projectModifier !== '無') {
           projectEval += sc.projectModifier;
         }
 
-        const dateScoreVals = dateList.map(d => stuDateScores[s.id]?.[d] ?? (d === todayStr ? Number(sc.plusScore) || 0 : 0));
+        const dateScoreVals = dateList.map(d => (d === todayStr ? todaysPlus : (stuDateScores[s.id]?.[d] ?? 0)));
 
         aoa.push([
           groupName,
@@ -2260,7 +2292,8 @@ document.addEventListener('DOMContentLoaded', () => {
           baseScore,
           ...dateScoreVals,
           projectEval,
-          totalPlus,
+          todaysPlus,
+          totalPlus + totalMinus,
           finalScore
         ]);
       });
