@@ -145,6 +145,14 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 .board-label { text-align:center; font-size:0.85rem; font-weight:900; color:var(--ink); background:var(--butter); border:2px solid var(--ink); border-radius:8px; padding:0.4rem 1rem; margin:0 auto 1.2rem; max-width:280px; letter-spacing:0.2em; }
 .seat-grid-container { overflow-x:auto; padding:0.8rem 0.2rem; }
 
+/* 即時加分面板的視角排列：不旋轉整個座位卡，只改顯示順序 */
+#scoreViewCaptureArea { display:flex; flex-direction:column; }
+#scoreViewCaptureArea #scoreCaptureClassTitle { order:1; }
+#scoreViewCaptureArea #scoreBoardLabel { order:2; }
+#scoreViewCaptureArea #scoreSeatArea { order:3; }
+#scoreViewCaptureArea.teacher-perspective #scoreBoardLabel { order:3; margin-top:1.2rem; margin-bottom:0; }
+#scoreViewCaptureArea.teacher-perspective #scoreSeatArea { order:2; }
+
 .seat-grid { display:grid; gap:0.9rem; justify-content:center; }
 
 .pods-grid { display:grid; gap:1.2rem; justify-content:center; }
@@ -531,6 +539,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <h2 id="scoreViewTitle" style="margin-top:0.6rem; font-size:1.8rem;">即時加分與計分面板</h2>
       </div>
       <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <button class="pill-btn small" id="toggleScorePerspectiveBtn">🔄 視角：👨‍🏫 教師視角（鏡射／講台在下）</button>
         <button class="pill-btn danger" id="resetTodayScoresBtn" style="font-size:0.95rem; padding:0.6rem 1.2rem;">🔄 今日加分歸零</button>
       </div>
     </div>
@@ -553,7 +562,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
       <div id="scoreViewCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line); margin-top:1rem;">
         <div class="classroom-title-banner" id="scoreCaptureClassTitle">班級即時加分面板</div>
-        <div class="board-label">— 講 台 —</div>
+        <div class="board-label" id="scoreBoardLabel">— 講 台 —</div>
 
         <div class="seat-grid-container" id="scoreSeatArea"></div>
       </div>
@@ -599,6 +608,7 @@ window.dashSelectedClasses = new Set();
 window.batchMode = false;
 window.selectedIds = new Set();
 window.isSeatsLocked = false;
+window.scorePerspective = 'teacher';
 
 let currentView = 'dash';
 let toastTimer;
@@ -1277,66 +1287,115 @@ function renderConfigSeats(){
   }
 }
 
-/*
- * 加分面板採「老師視角」顯示：
- * 原座位表的講台在上方，是給學生看較直覺的排列；
- * 老師站在講台往學生方向看時，左右會是鏡射的。
- *
- * 注意：只鏡射「加分面板的顯示順序」，不修改 cur.seats 原始座位資料，
- * 因此設定頁、拖曳換位、儲存資料與 Excel 匯出都不會被影響。
- */
-function getMirroredGridSeatsForScore(){
-  const cols = Number(cur.seatConfig?.cols) || 6;
-  const seats = Array.isArray(cur.seats) ? cur.seats : [];
-  const mirrored = [];
-
-  for(let start = 0; start < seats.length; start += cols){
-    mirrored.push(...seats.slice(start, start + cols).reverse());
-  }
-  return mirrored;
-}
-
-function getMirroredPodsForScore(){
-  const podColCount = Number(cur.seatConfig?.podCols) || 3;
-  const pods = Array.isArray(cur.seats) ? cur.seats : [];
-  const mirrored = [];
-
-  // 先將島嶼的左右位置鏡射；每個島內的桌位也同步左右鏡射。
-  for(let start = 0; start < pods.length; start += podColCount){
-    const row = pods.slice(start, start + podColCount).reverse();
-    row.forEach(pod => {
-      if(pod && Array.isArray(pod.desks)){
-        pod = {
-          ...pod,
-          desks: pod.desks.slice().reverse()
-        };
-      }
-      mirrored.push(pod);
-    });
-  }
-  return mirrored;
-}
-
 function renderScoreSeats(){
   if(!cur) return;
   const area = document.getElementById('scoreSeatArea');
+  const capture = document.getElementById('scoreViewCaptureArea');
+  const perspectiveBtn = document.getElementById('toggleScorePerspectiveBtn');
   if(!area) return;
   syncSeatsWithLayout();
 
-  if(!cur.seats || !Array.isArray(cur.seats) || cur.seats.length === 0){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
+  const isTeacherView = window.scorePerspective !== 'student';
+  if(capture) capture.classList.toggle('teacher-perspective', isTeacherView);
+  if(perspectiveBtn){
+    perspectiveBtn.textContent = isTeacherView
+      ? '🔄 視角：👨‍🏫 教師視角（鏡射／講台在下）'
+      : '🔄 視角：👨‍🎓 學生視角（講台在上）';
+  }
+
+  if(!cur.seats || !Array.isArray(cur.seats) || cur.seats.length === 0){
+    area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`;
+    return;
+  }
 
   const isPodsMode = cur.seatConfig && cur.seatConfig.layoutMode === 'pods';
 
   if(isPodsMode){
-    const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
-    const podColCount = Number(cur.seatConfig.podCols) || 3;
-    const mirroredPods = getMirroredPodsForScore();
+    /*
+      小組島嶼鏡射：
+      - 不修改 cur.seats
+      - 不 reverse 原始資料
+      - 每個畫面位置透過 display row/col 找回 source index
+      - data-pod / data-desk 永遠指向原始資料，拖曳才不會錯
+    */
+    const deskParts = String(cur.seatConfig.podDeskLayout || '2x2').split('x').map(Number);
+    const deskRows = Math.max(1, deskParts[0] || 2);
+    const deskCols = Math.max(1, deskParts[1] || 2);
+    const podColCount = Math.max(1, Number(cur.seatConfig.podCols) || 3);
+    const podCount = cur.seats.length;
+    const podRows = Math.max(1, Math.ceil(podCount / podColCount));
 
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${mirroredPods.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
+    const podHtml = [];
+    for(let displayPodIdx = 0; displayPodIdx < podRows * podColCount; displayPodIdx++){
+      const displayRow = Math.floor(displayPodIdx / podColCount);
+      const displayCol = displayPodIdx % podColCount;
+      const sourceRow = isTeacherView ? podRows - 1 - displayRow : displayRow;
+      const sourceCol = isTeacherView ? podColCount - 1 - displayCol : displayCol;
+      const sourcePodIdx = sourceRow * podColCount + sourceCol;
+      const pod = cur.seats[sourcePodIdx];
+
+      if(!pod){
+        podHtml.push(`<div class="pod-box" style="visibility:hidden;" aria-hidden="true"></div>`);
+        continue;
+      }
+
+      const deskHtml = [];
+      const deskCount = Math.max(deskRows * deskCols, (pod.desks || []).length);
+      const actualDeskRows = Math.max(deskRows, Math.ceil(deskCount / deskCols));
+      for(let displayDeskIdx = 0; displayDeskIdx < actualDeskRows * deskCols; displayDeskIdx++){
+        const dRow = Math.floor(displayDeskIdx / deskCols);
+        const dCol = displayDeskIdx % deskCols;
+        const sourceDRow = isTeacherView ? actualDeskRows - 1 - dRow : dRow;
+        const sourceDCol = isTeacherView ? deskCols - 1 - dCol : dCol;
+        const sourceDeskIdx = sourceDRow * deskCols + sourceDCol;
+        const o = (pod.desks || [])[sourceDeskIdx] || null;
+        deskHtml.push(getBaseSeatHtml(
+          o,
+          `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${sourcePodIdx}" data-desk="${sourceDeskIdx}"`,
+          true
+        ));
+      }
+
+      podHtml.push(`
+        <div class="pod-box">
+          <div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? sourcePodIdx) % GROUP_COLORS.length]};">
+            第 ${(pod.podId ?? sourcePodIdx)+1} 組島嶼
+          </div>
+          <div class="pod-desks" style="grid-template-columns:repeat(${deskCols}, minmax(120px, 1fr));">
+            ${deskHtml.join('')}
+          </div>
+        </div>`);
+    }
+
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${podColCount}, min-content);">${podHtml.join('')}</div>`;
     bindSeatEvents(area, true, true);
   } else {
-    const mirroredSeats = getMirroredGridSeatsForScore();
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${mirroredSeats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, true)).join('')}</div>`;
+    /*
+      傳統矩陣鏡射：
+      畫面位置(displayIdx) 與資料位置(sourceIdx) 分離。
+      教師視角同時反轉 row + col，因此姓名、分數、按鈕都仍來自正確的 seat object。
+    */
+    const rows = Math.max(1, Number(cur.seatConfig?.rows) || 5);
+    const cols = Math.max(1, Number(cur.seatConfig?.cols) || 6);
+    const totalGridSeats = rows * cols;
+    const html = [];
+
+    for(let displayIdx = 0; displayIdx < totalGridSeats; displayIdx++){
+      const displayRow = Math.floor(displayIdx / cols);
+      const displayCol = displayIdx % cols;
+      const sourceRow = isTeacherView ? rows - 1 - displayRow : displayRow;
+      const sourceCol = isTeacherView ? cols - 1 - displayCol : displayCol;
+      const sourceIdx = sourceRow * cols + sourceCol;
+      const o = cur.seats[sourceIdx] || null;
+
+      html.push(getBaseSeatHtml(
+        o,
+        `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${sourceIdx}"`,
+        true
+      ));
+    }
+
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cols}, minmax(140px, 1fr));">${html.join('')}</div>`;
     bindSeatEvents(area, false, true);
   }
 
@@ -1355,7 +1414,7 @@ function renderScoreSeats(){
       e.stopPropagation();
       const id = btn.dataset.stuid;
       const sc = getStudentScoreObj(id);
-      
+
       if(btn.classList.contains('hist-open-btn')){
         openHistoryModal(id);
         return;
@@ -1369,7 +1428,6 @@ function renderScoreSeats(){
     });
   });
 }
-
 function openHistoryModal(stuId){
   window.historyModalStuId = stuId;
   const s = findStudent(stuId);
@@ -1774,6 +1832,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* 手動「今日加分歸零」按鈕功能 */
+  document.getElementById('toggleScorePerspectiveBtn')?.addEventListener('click', () => {
+    window.scorePerspective = window.scorePerspective === 'teacher' ? 'student' : 'teacher';
+    renderScoreSeats();
+    toast(window.scorePerspective === 'teacher'
+      ? '已切換為教師視角：座位上下左右鏡射，講台在下方'
+      : '已切換為學生視角：原始座位排列，講台在上方');
+  });
+
   document.getElementById('resetTodayScoresBtn')?.addEventListener('click', () => {
     if (!cur) return;
     showConfirmModal(
