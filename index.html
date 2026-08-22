@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統 (全功能修復完整版)</title>
+<title>分組座位與即時計分系統</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -27,386 +27,396 @@
   --peach: #F9D8B4;
   --white: #FFFFFF;
   --radius: 16px;
-  --shadow: 0 2px 0 var(--line), 0 10px 24px -14px rgba(58,53,50,0.28);
 
-  /* 男女性別色系 */
-  --male-bg: #EEF6FF;
-  --male-border: #93C5FD;
+  /* 男女性別色系（柔和底色） */
+  --male-bg: #E8F2FE;
   --male-text: #1E3A8A;
-  --female-bg: #FFF0F5;
-  --female-border: #F9A8D4;
+  --female-bg: #FEEBF0;
   --female-text: #831843;
 }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC',sans-serif; line-height:1.6; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans TC',sans-serif; line-height:1.5; overflow-x:hidden; }
 h1,h2,h3,h4 { font-family:'Noto Sans TC',sans-serif; font-weight:900; margin:0; }
 .num { font-family:'Baloo 2',sans-serif; }
 button { font-family:inherit; cursor:pointer; }
 input,select,textarea { font-family:inherit; }
-:focus-visible { outline:3px solid var(--coral-deep); outline-offset:2px; }
+:focus-visible { outline:2px solid var(--coral-deep); outline-offset:1px; }
 
-.wrap { max-width:1200px; margin:0 auto; padding:0 clamp(1rem,3vw,2.4rem) 6rem; }
+.wrap { width:100%; max-width:100%; margin:0 auto; padding:0 clamp(0.8rem,2vw,1.8rem) 5rem; }
 
-header.top { position:sticky; top:0; z-index:30; background:var(--paper); border-bottom:2px dashed var(--line); }
-.top-inner { max-width:1200px; margin:0 auto; padding:0.8rem clamp(1rem,3vw,2.4rem); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-.brand { display:flex; align-items:center; gap:0.6rem; font-weight:900; font-size:1.25rem; cursor:pointer; }
-.brand .dot { width:12px; height:12px; border-radius:50%; background:var(--coral); }
-.class-bar { display:flex; align-items:center; gap:0.6rem; margin-left:auto; flex-wrap:wrap; }
-.bar-divider { width:1px; height:22px; background:var(--line); display:inline-block; }
-select { padding:0.45rem 0.8rem; border-radius:999px; border:2px solid var(--line); background:var(--white); color:var(--ink); font-size:0.85rem; }
+header.top { position:sticky; top:0; z-index:30; background:var(--paper); border-bottom:1.5px solid var(--line); }
+.top-inner { width:100%; max-width:100%; margin:0 auto; padding:0.6rem clamp(0.8rem,2vw,1.8rem); display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; }
+.brand { display:flex; align-items:center; gap:0.5rem; font-weight:900; font-size:1.15rem; cursor:pointer; }
+.brand .dot { width:10px; height:10px; border-radius:50%; background:var(--coral); }
+.class-bar { display:flex; align-items:center; gap:0.5rem; margin-left:auto; flex-wrap:wrap; }
+.bar-divider { width:1px; height:20px; background:var(--line); display:inline-block; }
+select { padding:0.35rem 0.6rem; border-radius:999px; border:1px solid var(--line); background:var(--white); color:var(--ink); font-size:0.8rem; }
 select:disabled { background:var(--paper-deep); color:var(--ink-soft); cursor:not-allowed; }
-.pill-btn { padding:0.45rem 0.95rem; border-radius:999px; border:2px solid var(--ink); background:var(--white); color:var(--ink); font-weight:700; font-size:0.85rem; transition:transform .15s ease, background .2s ease; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; }
-.pill-btn:hover { transform:translateY(-2px); }
+.pill-btn { padding:0.35rem 0.8rem; border-radius:999px; border:1px solid var(--ink); background:var(--white); color:var(--ink); font-weight:700; font-size:0.8rem; transition:transform .15s ease, background .2s ease; display:inline-flex; align-items:center; justify-content:center; gap:0.25rem; }
+.pill-btn:hover { transform:translateY(-1px); }
 .pill-btn:disabled { opacity:0.5; pointer-events:none; }
 .pill-btn.primary { background:var(--coral); border-color:var(--coral-deep); color:var(--white); }
 .pill-btn.danger { background:var(--white); border-color:#c9564a; color:#c9564a; }
-.pill-btn.small { padding:0.35rem 0.75rem; font-size:0.78rem; }
+.pill-btn.small { padding:0.28rem 0.65rem; font-size:0.75rem; }
 
-.sync-status-badge { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.8rem; border-radius:999px; font-size:0.8rem; font-weight:700; border:2px solid transparent; cursor:pointer; }
-.sync-status-badge.connected { background:var(--mint); color:#144A29; border-color:#144A29; }
-.sync-status-badge.syncing { background:var(--butter); color:#7A5200; border-color:#7A5200; }
-.sync-status-badge.error { background:#F6C9CE; color:#8A3B4D; border-color:#8A3B4D; }
-.sync-status-badge.local { background:#E2E8F0; color:#334155; border-color:#64748B; }
+.sync-status-badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.3rem 0.7rem; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer; }
+.sync-status-badge.connected { background:var(--mint); color:#144A29; }
+.sync-status-badge.syncing { background:var(--butter); color:#7A5200; }
+.sync-status-badge.error { background:#F6C9CE; color:#8A3B4D; }
+.sync-status-badge.local { background:#E2E8F0; color:#334155; }
 
 .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; display:none; padding:1rem; overflow-y:auto; }
-.modal-box { background:var(--white); border:3px solid var(--ink); border-radius:var(--radius); padding:1.8rem; width:100%; max-width:600px; box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto; }
-.modal-box h3 { margin-bottom:1rem; font-size:1.2rem; }
-.modal-box p { font-size:0.88rem; color:var(--ink-soft); margin-bottom:1rem; line-height:1.6; }
-.modal-btns { display:flex; gap:0.8rem; justify-content:flex-end; margin-top:1.5rem; flex-wrap:wrap; }
+.modal-box { background:var(--white); border-radius:var(--radius); padding:1.5rem; width:100%; max-width:560px; box-shadow:0 10px 30px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin-bottom:0.8rem; font-size:1.15rem; }
+.modal-box p { font-size:0.85rem; color:var(--ink-soft); margin-bottom:0.8rem; line-height:1.5; }
+.modal-btns { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
 
 .dashboard-view { display:block; }
 .classroom-config-view { display:none; }
 .classroom-score-view { display:none; }
 
-.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.2rem; }
-.year-section { margin-bottom:2.5rem; background:var(--paper-deep); padding:1.2rem 1.5rem; border-radius:20px; border:2px dashed var(--line); }
-.year-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem; }
-.year-header h2 { font-size:1.3rem; display:flex; align-items:center; gap:0.5rem; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:1rem; }
+.year-section { margin-bottom:2rem; background:var(--paper-deep); padding:1rem 1.2rem; border-radius:16px; }
+.year-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.8rem; }
+.year-header h2 { font-size:1.2rem; display:flex; align-items:center; gap:0.4rem; }
 
-.class-overview-card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:12px; box-shadow:var(--shadow); transition:transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease; display:flex; flex-direction:column; }
-.class-overview-card:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.15); }
-.class-overview-card.selected { border-color:var(--coral-deep); box-shadow:0 0 0 4px rgba(217,122,98,0.2); background:#FFF9F8; }
-.card-check { position:absolute; top:8px; right:8px; z-index:10; width:32px; height:34px; background:rgba(255,255,255,0.9); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.card-check input { width:18px; height:18px; cursor:pointer; accent-color:var(--coral-deep); pointer-events:none; }
-.card-content { padding:1.2rem; padding-right:3rem; cursor:pointer; flex:1; }
-.class-overview-card h3 { font-size:1.1rem; margin-bottom:0.4rem; color:var(--ink); }
-.class-overview-card .meta { font-size:0.8rem; color:var(--ink-soft); margin-bottom:0.8rem; }
-.class-overview-card .stats { display:flex; gap:0.6rem; font-size:0.78rem; font-weight:700; background:var(--paper-deep); padding:0.4rem 0.8rem; border-radius:8px; flex-wrap:wrap; }
+.class-overview-card { position:relative; background:var(--white); border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05); transition:transform 0.15s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
+.class-overview-card:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,0.1); }
+.class-overview-card.selected { background:#FFF4F2; box-shadow:0 0 0 2px var(--coral-deep); }
+.card-check { position:absolute; top:8px; right:8px; z-index:10; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.card-check input { width:16px; height:16px; cursor:pointer; accent-color:var(--coral-deep); pointer-events:none; }
+.card-content { padding:1rem; padding-right:2.5rem; cursor:pointer; flex:1; }
+.class-overview-card h3 { font-size:1.05rem; margin-bottom:0.3rem; color:var(--ink); }
+.class-overview-card .meta { font-size:0.78rem; color:var(--ink-soft); margin-bottom:0.6rem; }
+.class-overview-card .stats { display:flex; gap:0.5rem; font-size:0.75rem; font-weight:700; background:var(--paper-deep); padding:0.35rem 0.7rem; border-radius:6px; flex-wrap:wrap; }
 
-.card { position:relative; background:var(--white); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.8rem clamp(1.1rem,3vw,2rem) 2rem; margin-top:2.2rem; }
-.tape { position:absolute; top:-14px; left:32px; width:86px; height:26px; background:repeating-linear-gradient(45deg, var(--tape-color,var(--butter)), var(--tape-color,var(--butter)) 6px, rgba(255,255,255,0.35) 6px, rgba(255,255,255,0.35) 12px); transform:rotate(-4deg); border:1px solid rgba(58,53,50,0.15); opacity:0.92; }
-.step-head { display:flex; align-items:center; gap:0.9rem; margin-bottom:1.2rem; flex-wrap:wrap; }
-.step-badge { width:38px; height:38px; border-radius:50%; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.05rem; background:var(--badge-color,var(--pink)); flex-shrink:0; }
+.card { position:relative; background:var(--white); border-radius:var(--radius); box-shadow:0 4px 18px rgba(0,0,0,0.04); padding:1.4rem clamp(1rem,2vw,1.6rem); margin-top:1.8rem; }
+.step-head { display:flex; align-items:center; gap:0.7rem; margin-bottom:1rem; flex-wrap:wrap; }
+.step-badge { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.95rem; background:var(--badge-color,var(--pink)); flex-shrink:0; }
 
-.hero { padding:2rem 0 1rem; }
-.hero .kicker { font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.85rem; letter-spacing:0.1em; color:var(--coral-deep); }
-.hero h1 { font-size:clamp(1.8rem,4vw,2.4rem); margin-top:0.3rem; line-height:1.3; }
-.hero p { margin-top:0.5rem; color:var(--ink-soft); max-width:65ch; font-size:0.92rem; }
+.hero { padding:1.5rem 0 0.8rem; }
+.hero .kicker { font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.8rem; letter-spacing:0.08em; color:var(--coral-deep); }
+.hero h1 { font-size:clamp(1.5rem,3.5vw,2rem); margin-top:0.2rem; line-height:1.2; }
+.hero p { margin-top:0.3rem; color:var(--ink-soft); font-size:0.88rem; }
 
-.field { margin-bottom:1rem; }
-.field label { display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--ink-soft); }
-textarea, .text-input { width:100%; padding:0.65rem 0.85rem; border:2px solid var(--line); border-radius:10px; background:var(--paper); color:var(--ink); font-size:0.9rem; resize:vertical; }
-textarea { min-height:100px; }
-.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+.field { margin-bottom:0.8rem; }
+.field label { display:block; font-size:0.8rem; font-weight:700; margin-bottom:0.3rem; color:var(--ink-soft); }
+textarea, .text-input { width:100%; padding:0.55rem 0.75rem; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-size:0.88rem; resize:vertical; }
+textarea { min-height:90px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 
-.stepper { display:inline-flex; align-items:center; border:2px solid var(--ink); border-radius:999px; overflow:hidden; }
-.stepper button { width:32px; height:32px; background:var(--paper-deep); border:none; font-size:1.1rem; font-weight:700; }
+.stepper { display:inline-flex; align-items:center; border-radius:999px; overflow:hidden; background:var(--paper-deep); }
+.stepper button { width:28px; height:28px; background:transparent; border:none; font-size:1rem; font-weight:700; }
 .stepper button:hover { background:var(--butter); }
-.stepper .val { width:40px; text-align:center; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.95rem; }
-.stepper-row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.8rem; }
-.stepper-row .label { font-size:0.85rem; font-weight:700; min-width:5.5em; }
+.stepper .val { width:36px; text-align:center; font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.9rem; }
+.stepper-row { display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; margin-bottom:0.6rem; }
+.stepper-row .label { font-size:0.82rem; font-weight:700; min-width:5em; }
 
-.toggle-group { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.9rem; }
-.toggle-group button { padding:0.45rem 0.95rem; border-radius:10px; border:2px solid var(--line); background:var(--paper); font-size:0.82rem; font-weight:700; color:var(--ink-soft); }
-.toggle-group button.active { border-color:var(--ink); background:var(--pink); color:var(--ink); }
+.toggle-group { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.8rem; }
+.toggle-group button { padding:0.35rem 0.8rem; border-radius:8px; border:1px solid var(--line); background:var(--paper); font-size:0.8rem; font-weight:700; color:var(--ink-soft); }
+.toggle-group button.active { border-color:transparent; background:var(--pink); color:var(--ink); }
 
-.roster-cols { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
-table.roster { width:100%; border-collapse:collapse; font-size:0.85rem; }
-table.roster th { text-align:left; font-size:0.72rem; color:var(--ink-soft); padding:0.4rem 0.5rem; border-bottom:2px solid var(--ink); }
-table.roster td { padding:0.35rem 0.5rem; border-bottom:1px dashed var(--line); }
-table.roster td[contenteditable] { outline:none; border-radius:6px; }
+.roster-cols { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+table.roster { width:100%; border-collapse:collapse; font-size:0.82rem; }
+table.roster th { text-align:left; font-size:0.72rem; color:var(--ink-soft); padding:0.3rem 0.4rem; border-bottom:1.5px solid var(--ink); }
+table.roster td { padding:0.3rem 0.4rem; border-bottom:1px dashed var(--line); }
+table.roster td[contenteditable] { outline:none; border-radius:4px; }
 table.roster td[contenteditable]:focus { background:var(--paper-deep); }
-table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; font-weight:900; padding:0 0.3rem; }
+table.roster .rm { background:none; border:none; color:#c9564a; font-size:0.9rem; font-weight:900; padding:0 0.2rem; }
 
-.chip-list { display:flex; flex-wrap:wrap; gap:0.5rem; }
-.chip { display:inline-flex; align-items:center; gap:0.5rem; padding:0.35rem 0.7rem; border-radius:999px; border:2px solid var(--ink); background:var(--lilac); font-size:0.8rem; font-weight:700; }
-.chip button { background:none; border:none; font-weight:900; color:var(--ink); font-size:0.9rem; cursor:pointer; }
+.chip-list { display:flex; flex-wrap:wrap; gap:0.4rem; }
+.chip { display:inline-flex; align-items:center; gap:0.4rem; padding:0.25rem 0.6rem; border-radius:999px; background:var(--lilac); font-size:0.78rem; font-weight:700; }
+.chip button { background:none; border:none; font-weight:900; color:var(--ink); font-size:0.85rem; cursor:pointer; }
 
-.groups-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1rem; }
-.group-card { border:2px solid var(--ink); border-radius:12px; overflow:hidden; background:var(--paper); }
-.group-card .gh { padding:0.5rem 0.8rem; font-weight:800; font-family:'Baloo 2',sans-serif; background:var(--gcolor,var(--mint)); display:flex; justify-content:space-between; align-items:center; }
-.group-card ul { list-style:none; margin:0; padding:0.4rem 0.3rem; }
-.group-card li { display:flex; align-items:center; justify-content:space-between; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.85rem; }
+.groups-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:0.8rem; }
+.group-card { border-radius:10px; overflow:hidden; background:var(--paper); box-shadow:0 1px 4px rgba(0,0,0,0.04); }
+.group-card .gh { padding:0.4rem 0.7rem; font-weight:800; font-family:'Baloo 2',sans-serif; background:var(--gcolor,var(--mint)); display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; }
+.group-card ul { list-style:none; margin:0; padding:0.3rem; }
+.group-card li { display:flex; align-items:center; justify-content:space-between; padding:0.25rem 0.4rem; border-radius:6px; font-size:0.8rem; }
 .group-card li:hover { background:var(--paper-deep); }
-.group-card select.move-sel { font-size:0.72rem; padding:0.15rem 0.3rem; border-radius:6px; }
+.group-card select.move-sel { font-size:0.7rem; padding:0.1rem 0.2rem; border-radius:4px; }
 
 /* 教室看板標題 */
-.classroom-title-banner { text-align:center; font-size:1.1rem; font-weight:900; color:var(--ink); margin-bottom:0.6rem; }
-.board-label { text-align:center; font-size:0.85rem; font-weight:900; color:var(--ink); background:var(--butter); border:2px solid var(--ink); border-radius:8px; padding:0.4rem 1rem; margin:0 auto 1.2rem; max-width:280px; letter-spacing:0.2em; }
-.seat-grid-container { overflow-x:auto; padding:0.8rem 0.2rem; }
+.classroom-title-banner { text-align:center; font-size:1.1rem; font-weight:900; color:var(--ink); margin-bottom:0.4rem; }
+.board-label { text-align:center; font-size:0.82rem; font-weight:900; color:var(--ink); background:var(--butter); border-radius:6px; padding:0.3rem 0.8rem; margin:0 auto 0.8rem; max-width:240px; letter-spacing:0.2em; }
 
-/* 即時加分面板的視角排列：不旋轉整個座位卡，只改顯示順序 */
-#scoreViewCaptureArea { display:flex; flex-direction:column; }
+.seat-grid-container { width:100%; overflow-x:visible; padding:0.4rem 0; }
+
+#scoreViewCaptureArea { display:flex; flex-direction:column; width:100%; }
 #scoreViewCaptureArea #scoreCaptureClassTitle { order:1; }
 #scoreViewCaptureArea #scoreBoardLabel { order:2; }
 #scoreViewCaptureArea #scoreSeatArea { order:3; }
-#scoreViewCaptureArea.teacher-perspective #scoreBoardLabel { order:3; margin-top:1.2rem; margin-bottom:0; }
+#scoreViewCaptureArea.teacher-perspective #scoreBoardLabel { order:3; margin-top:0.8rem; margin-bottom:0; }
 #scoreViewCaptureArea.teacher-perspective #scoreSeatArea { order:2; }
 
-.seat-grid { display:grid; gap:0.9rem; justify-content:center; }
+/* 依排數自動等寬平分空間，滿版無水平捲軸 */
+.seat-grid { width:100%; display:grid; gap:0.5rem; justify-content:stretch; }
+.pods-grid { width:100%; display:grid; gap:0.8rem; justify-content:stretch; }
+.pods-grid .pod-box { border-radius:14px; padding:0.6rem; background:rgba(255,255,255,0.7); box-shadow:0 2px 8px rgba(0,0,0,0.03); }
+.pods-grid .pod-head { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.85rem; padding:0.2rem 0.6rem; border-radius:6px; background:var(--pcolor,var(--mint)); margin-bottom:0.5rem; display:inline-block; }
+.pods-grid .pod-desks { display:grid; gap:0.45rem; width:100%; }
 
-.pods-grid { display:grid; gap:1.2rem; justify-content:center; }
-.pods-grid .pod-box { border:2px dashed var(--ink); border-radius:14px; padding:0.8rem; background:rgba(255,255,255,0.85); box-shadow:0 3px 10px rgba(0,0,0,0.03); flex:0 0 auto; }
-.pods-grid .pod-head { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.9rem; padding:0.25rem 0.75rem; border-radius:8px; background:var(--pcolor,var(--mint)); margin-bottom:0.7rem; display:inline-block; border:1.5px solid var(--ink); }
-.pods-grid .pod-desks { display:grid; gap:0.7rem; }
-
-/* 座位卡片通用樣式 */
+/* =========================================================
+   ✨ 座位卡樣式（無邊框平視版）
+========================================================= */
 .seat {
   width: 100%;
-  min-width: 140px;
-  max-width: 175px;
-  min-height: 110px;
-  border-radius: 12px;
-  border: 2px solid var(--ink);
-  background: var(--white);
-  padding: 0.65rem 0.75rem;
+  min-width: 0;
+  border-radius: 14px;
+  border: none;
+  background: #F0F6FF;
+  padding: 0.5rem 0.55rem;
   font-size: 0.8rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 0.35rem;
   user-select: none;
   transition: transform .15s ease, box-shadow .2s ease;
   position: relative;
   overflow: hidden;
   cursor: grab;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
 }
-
-/* 即時加分面板：依照加分卡片的三段式資訊排列 */
-.score-seat-card {
-  min-width: 150px;
-  max-width: 180px;
-  min-height: 112px;
-  padding: 0.48rem 0.55rem 0.5rem;
-  border-width: 2px;
-  border-radius: 13px;
-  gap: 0.28rem;
-}
-.score-seat-card .score-seat-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.3rem;
-}
-.score-seat-card .score-seat-name {
-  font-size: 0.98rem;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-.score-seat-card .score-seat-no {
-  padding: 0.08rem 0.42rem;
-  border: 1px solid #C9D0D8;
-  border-radius: 9px;
-  background: #F5F7FA;
-  color: #667085;
-  font-size: 0.68rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.score-seat-card .score-seat-group {
-  padding: 0.08rem 0.48rem;
-  border-radius: 9px;
-  border: 1px solid rgba(0,0,0,0.16);
-  background: var(--scolor, var(--paper-deep));
-  color: var(--ink);
-  font-size: 0.68rem;
-  font-weight: 900;
-  white-space: nowrap;
-}
-.score-seat-card .score-main-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid #DCE2E8;
-  border-radius: 9px;
-  background: rgba(255,255,255,0.72);
-}
-.score-seat-card .score-today {
-  color: #7285B8;
-  font-weight: 900;
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
-.score-seat-card .score-today strong {
-  color: #7184B6;
-  font-family: 'Baloo 2', sans-serif;
-  font-size: 1rem;
-}
-.score-seat-card .score-actions {
-  display: flex;
-  gap: 0.22rem;
-}
-.score-seat-card .score-actions .score-btn {
-  width: 31px;
-  height: 28px;
-  border-radius: 8px;
-  border: 2px solid #111;
-  background: #fff;
-  font-size: 0.92rem;
-}
-.score-seat-card .score-actions .hist-open-btn {
-  font-size: 0.9rem;
-}
-.score-seat-card .score-bottom-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 32px 32px minmax(62px, auto);
-  align-items: center;
-  gap: 0.22rem;
-}
-.score-seat-card .score-grade-select {
-  width: 100%;
-  min-width: 0;
-  height: 29px;
-  padding: 0 0.45rem;
-  border: 2px solid #D5DCE4;
-  border-radius: 8px;
-  background: #F8FAFC;
-  color: #596B86;
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-.score-seat-card .score-mod-btn {
-  width: 32px;
-  height: 29px;
-  border: 2px solid #D5DCE4;
-  border-radius: 8px;
-  background: #F8FAFC;
-  color: #7A8798;
-  font-size: 0.92rem;
-  font-weight: 900;
-  padding: 0;
-}
-.score-seat-card .score-mod-btn.active {
-  background: #FFF0C9;
-  border-color: #D7B96D;
-  color: #8A6200;
-}
-.score-seat-card .score-role-box {
-  height: 29px;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.42rem;
-  border: 2px solid #D5C08A;
-  border-radius: 8px;
-  background: #FFF2C9;
-  color: #2B251E;
-  font-size: 0.72rem;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.score-seat-card .score-role-box.empty-role { color: #8A806F; }
-.score-seat-card .role-badges-wrap { display: none; }
-.score-seat-card .group-tag { display: none; }
-.score-seat-card .seat-top-row { display: none; }
-
-
-.pods-grid .seat {
-  min-width: 120px;
-  max-width: 145px;
-  min-height: 105px;
-  padding: 0.5rem 0.55rem;
-  font-size: 0.75rem;
-}
-.pods-grid .seat-name { font-size: 0.88rem; }
-.pods-grid .score-control-box { padding: 2px 4px; font-size: 0.72rem; }
-.pods-grid .seat-score-row select { height: 20px; font-size: 0.68rem; padding: 0 2px; }
 
 .seat:active { cursor:grabbing; }
-.seat:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
+.seat:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.08); }
 
 .seat.gender-m {
   background: var(--male-bg);
-  border-color: var(--male-border);
   color: var(--male-text);
 }
 .seat.gender-f {
   background: var(--female-bg);
-  border-color: var(--female-border);
   color: var(--female-text);
 }
 
-.seat .group-tag { font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:5px; display:inline-block; white-space:nowrap; width:fit-content; background:var(--scolor, var(--paper-deep)); color:var(--ink); border:1px solid var(--ink); margin-top:2px; }
-.seat .seat-right-col { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
-.seat .role-badges-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:2px; pointer-events:none; z-index:2; margin-top:2px; }
-.seat .role-badge { font-size:0.6rem; font-weight:900; background:var(--coral-deep); color:#FFF; padding:1px 5px; border-radius:4px; line-height:1.2; white-space:nowrap; }
+/* 第一階段：專屬精簡兩行式卡片 */
+.seat.stage1-seat {
+  min-height: 72px;
+  justify-content: space-around;
+  padding: 0.5rem 0.6rem;
+}
+.seat-s1-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.3rem;
+}
+.seat-s1-row2 {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  overflow-x: hidden;
+}
 
-.seat-top-row { display:flex; justify-content:space-between; align-items:flex-start; width:100%; gap:4px; overflow:hidden; margin-bottom:2px; padding-left:0; }
-.seat.batch-selectable .seat-top-row { padding-left: 22px; }
-.seat-name { font-weight:900; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:left; }
-.seat-no { font-size:0.7rem; font-weight:700; opacity:0.8; white-space:nowrap; flex-shrink:0; background:rgba(255,255,255,0.6); padding:1px 5px; border-radius:4px; border:1px solid rgba(0,0,0,0.1); }
+/* 學生姓名 */
+.seat-name-text {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #274b78;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.seat.gender-f .seat-name-text {
+  color: #831843;
+}
 
-.score-control-box { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.7); border:1px solid var(--line); border-radius:8px; padding:3px 6px; font-size:0.78rem; margin-top:4px; font-weight:700; color:var(--ink); }
-.score-control-btns { display:flex; gap:2px; }
-.score-btn { width:22px; height:22px; font-size:0.75rem; font-weight:bold; border-radius:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; background:var(--white); border:1px solid var(--ink); color:var(--ink); }
-.score-btn:hover { background:var(--butter); }
+/* 座號膠囊 */
+.seat-pill-no {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #4b6382;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  padding: 0.18rem 0.45rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
-.seat-score-row { display:flex; align-items:center; gap:3px; margin-top:3px; }
-.seat-score-row select { padding:1px 4px; font-size:0.72rem; font-weight:700; border-radius:6px; border:1px solid var(--line); background:var(--white); color:var(--ink); height:22px; }
-.seat-score-row select.grade-sel { flex:1; min-width:0; }
-.seat-score-row select.mod-sel { width:38px; text-align:center; }
+/* 組別膠囊 */
+.seat-pill-group {
+  font-size: 0.75rem;
+  font-weight: 900;
+  background: #f6caca;
+  color: #3b2a2a;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
-.seat.empty { background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; min-height:100px; border-color:var(--line); }
-.seat.drag-over { transform:scale(1.03); outline:3px dashed var(--coral-deep); z-index:10; }
+/* 分工標籤膠囊 */
+.seat-role-pill {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  background: #FDF0D0;
+  color: #533B1E;
+  font-size: 0.72rem;
+  font-weight: 900;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seat-role-pill.empty-role {
+  background: rgba(255,255,255,0.4);
+  color: #94a3b8;
+  font-weight: 700;
+}
 
-.job-brush-panel { background:var(--paper-deep); border:2px solid var(--line); border-radius:12px; padding:0.9rem 1.1rem; margin-bottom:1rem; }
-.brush-btns { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; }
-.brush-btn { padding:0.4rem 0.85rem; border-radius:999px; border:2px solid var(--ink); background:var(--white); font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.3rem; }
-.brush-btn.active { background:var(--coral); color:var(--white); border-color:var(--coral-deep); transform:translateY(-2px); }
+/* 第二階段（加分面板）三行樣式 */
+.seat-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+}
+.seat-row-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.9);
+  border-radius: 8px;
+  padding: 0.15rem 0.25rem 0.15rem 0.45rem;
+  width: 100%;
+}
+.seat-score-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #496387;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.seat-score-val {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #244872;
+}
+.seat-score-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.seat-action-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: #EAEFF5;
+  color: #111827;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.seat-action-btn:hover { background: #feeaa6; }
+.seat-action-btn:active { transform: scale(0.92); }
+
+.seat-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+}
+.seat-grade-pill {
+  flex: 1.1;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,0.85);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #496387;
+  padding: 0 0.2rem;
+  text-align: center;
+  cursor: pointer;
+}
+.seat-mod-pill {
+  width: 32px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,0.85);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #496387;
+  padding: 0;
+  text-align: center;
+  cursor: pointer;
+}
+
+.seat.empty {
+  background: #F1F5F9;
+  color: #94a3b8;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: default;
+  min-height: 72px;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.seat.drag-over { transform:scale(1.02); outline:2px dashed var(--coral-deep); z-index:10; }
+
+.job-brush-panel { background:var(--paper-deep); border-radius:10px; padding:0.8rem 1rem; margin-bottom:1rem; }
+.brush-btns { display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.4rem; }
+.brush-btn { padding:0.35rem 0.75rem; border-radius:999px; border:1px solid var(--ink); background:var(--white); font-weight:700; font-size:0.78rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; }
+.brush-btn.active { background:var(--coral); color:var(--white); border-color:var(--coral-deep); transform:translateY(-1px); }
 .brush-btn.eraser.active { background:#c9564a; color:var(--white); }
 
-.export-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
-.export-btn { border:2px solid var(--ink); border-radius:12px; padding:1rem; background:var(--paper); text-align:left; font-weight:700; }
+.export-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.8rem; }
+.export-btn { border:1px solid var(--line); border-radius:10px; padding:0.8rem; background:var(--paper); text-align:left; font-weight:700; }
 .export-btn:hover { background:var(--butter); }
 
-.empty-hint { font-size:0.85rem; color:var(--ink-soft); padding:1rem; border:2px dashed var(--line); border-radius:10px; text-align:center; }
-.toast { position:fixed; bottom:1.4rem; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:0.7rem 1.2rem; border-radius:999px; font-size:0.85rem; z-index:1100; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; text-align:center; }
+.empty-hint { font-size:0.82rem; color:var(--ink-soft); padding:1rem; border-radius:8px; background:var(--paper-deep); text-align:center; }
+.toast { position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:0.6rem 1.1rem; border-radius:999px; font-size:0.82rem; z-index:1100; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; text-align:center; }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
 .toast.toast-error { background:#c9564a; }
 
-.archive-list { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.8rem; max-height:260px; overflow-y:auto; }
-.archive-item { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; background:var(--paper); border:2px solid var(--line); border-radius:10px; padding:0.6rem 0.8rem; flex-wrap:wrap; }
+.archive-list { display:flex; flex-direction:column; gap:0.5rem; margin-top:0.6rem; max-height:240px; overflow-y:auto; }
+.archive-item { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; background:var(--paper); border-radius:8px; padding:0.5rem 0.7rem; flex-wrap:wrap; font-size:0.82rem; }
 
-.history-log-list { display:flex; flex-direction:column; gap:0.5rem; max-height:300px; overflow-y:auto; margin-top:0.8rem; }
-.history-log-item { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; padding:0.5rem 0.7rem; border-radius:8px; background:var(--paper); border:1.5px solid var(--line); font-size:0.8rem; }
+.history-log-list { display:flex; flex-direction:column; gap:0.4rem; max-height:280px; overflow-y:auto; margin-top:0.6rem; }
+.history-log-item { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.45rem 0.65rem; border-radius:6px; background:var(--paper); font-size:0.78rem; }
 .history-log-item .hl-delta.pos { color:#1d5c3a; font-weight:800; }
 .history-log-item .hl-delta.neg { color:#8A3B4D; font-weight:800; }
 
-.batch-toggle-row { display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; margin-top:0.6rem; padding-top:0.6rem; border-top:1.5px dashed var(--line); }
+.batch-toggle-row { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-top:0.5rem; padding-top:0.5rem; }
 .seat.batch-selectable { cursor:pointer; }
-.seat.batch-selected { outline:3px solid var(--coral-deep); outline-offset:2px; box-shadow:0 0 0 4px rgba(217,122,98,0.25); }
-.seat-select-check { position:absolute; top:4px; left:4px; width:18px; height:18px; border-radius:4px; border:2px solid currentColor; background:rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:900; color:var(--ink); z-index:3; }
-.seat.batch-selected .seat-select-check { background:var(--coral-deep); color:#fff; border-color:var(--coral-deep); }
+.seat.batch-selected { box-shadow:0 0 0 2px var(--coral-deep); }
+.seat-select-check { position:absolute; top:4px; left:4px; width:16px; height:16px; border-radius:4px; background:rgba(255,255,255,0.9); display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:900; color:var(--ink); z-index:3; }
+.seat.batch-selected .seat-select-check { background:var(--coral-deep); color:#fff; }
 
-.batch-toolbar { position:sticky; bottom:0.8rem; z-index:40; display:none; align-items:center; gap:0.6rem; flex-wrap:wrap; background:var(--ink); color:var(--paper); border-radius:14px; padding:0.6rem 1rem; margin-top:1rem; box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.batch-toolbar { position:sticky; bottom:0.8rem; z-index:40; display:none; align-items:center; gap:0.5rem; flex-wrap:wrap; background:var(--ink); color:var(--paper); border-radius:12px; padding:0.5rem 0.9rem; margin-top:0.8rem; box-shadow:0 6px 20px rgba(0,0,0,0.25); }
 .batch-toolbar.show { display:flex; }
-.batch-toolbar .bt-count { font-weight:800; font-size:0.82rem; background:var(--coral); padding:0.25rem 0.7rem; border-radius:999px; white-space:nowrap; }
-.batch-toolbar button { padding:0.35rem 0.8rem; border-radius:999px; border:2px solid var(--paper); background:transparent; color:var(--paper); font-weight:700; font-size:0.78rem; }
+.batch-toolbar .bt-count { font-weight:800; font-size:0.78rem; background:var(--coral); padding:0.2rem 0.6rem; border-radius:999px; white-space:nowrap; }
+.batch-toolbar button { padding:0.3rem 0.7rem; border-radius:999px; border:1px solid var(--paper); background:transparent; color:var(--paper); font-weight:700; font-size:0.75rem; }
 .batch-toolbar button:hover { background:rgba(255,255,255,0.15); }
 .batch-toolbar button.bt-primary { background:var(--coral); border-color:var(--coral-deep); }
 .batch-toolbar button.bt-danger { background:#c9564a; border-color:#9a3c33; }
 
-.diag-card { background:#FFF5F5; border:2px solid #E53E3E; border-radius:10px; padding:1rem; margin-top:1rem; font-size:0.82rem; color:#9B2C2C; }
-.diag-card h4 { font-size:0.95rem; margin-bottom:0.4rem; }
-.diag-card ol { margin:0.4rem 0 0 1.2rem; padding:0; }
+.diag-card { background:#FFF5F5; border:1px solid #E53E3E; border-radius:8px; padding:0.8rem; margin-top:0.8rem; font-size:0.8rem; color:#9B2C2C; }
+.diag-card h4 { font-size:0.9rem; margin-bottom:0.3rem; }
+.diag-card ol { margin:0.3rem 0 0 1.1rem; padding:0; }
 </style>
 </head>
 <body>
@@ -415,7 +425,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
   <div class="top-inner">
     <div class="brand" id="goDashboardBtn"><span class="dot"></span>分組座位與即時計分系統</div>
     <div class="class-bar">
-      <div id="classroomHeaderTools" style="display:none; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+      <div id="classroomHeaderTools" style="display:none; align-items:center; gap:0.5rem; flex-wrap:wrap;">
         <button class="pill-btn small" id="backToDashBtn">🏠 回首頁總覽</button>
         <span class="bar-divider"></span>
       </div>
@@ -432,9 +442,9 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
 <!-- 自訂確認對話框 -->
 <div class="modal-overlay" id="customConfirmModal">
-  <div class="modal-box" style="max-width:420px;">
+  <div class="modal-box" style="max-width:400px;">
     <h3 id="confirmModalTitle">確認操作</h3>
-    <p id="confirmModalMessage" style="font-size:0.92rem; color:var(--ink); margin-bottom:1.5rem;"></p>
+    <p id="confirmModalMessage" style="font-size:0.88rem; color:var(--ink); margin-bottom:1.2rem;"></p>
     <div class="modal-btns">
       <button class="pill-btn" id="confirmModalCancelBtn">取消</button>
       <button class="pill-btn danger" id="confirmModalOkBtn">確定</button>
@@ -444,9 +454,9 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
 <!-- 自訂輸入對話框 -->
 <div class="modal-overlay" id="customInputModal">
-  <div class="modal-box" style="max-width:450px;">
+  <div class="modal-box" style="max-width:420px;">
     <h3 id="inputModalTitle">請輸入</h3>
-    <p id="inputModalMessage" style="font-size:0.88rem; color:var(--ink-soft); margin-bottom:0.8rem;"></p>
+    <p id="inputModalMessage" style="font-size:0.85rem; color:var(--ink-soft); margin-bottom:0.7rem;"></p>
     <div id="inputModalFields"></div>
     <div class="modal-btns">
       <button class="pill-btn" id="inputModalCancelBtn">取消</button>
@@ -462,18 +472,18 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
     <div id="firebaseDiagArea"></div>
 
-    <div class="field" style="margin-top:1rem;">
+    <div class="field" style="margin-top:0.8rem;">
       <label for="fbConfigInput">自訂 Firebase Config (JSON)：</label>
       <textarea id="fbConfigInput" placeholder="{}"></textarea>
     </div>
-    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
       <button class="pill-btn primary" id="saveFbConfigBtn">💾 儲存並重新連線</button>
       <button class="pill-btn danger" id="clearFbConfigBtn">恢復預設專案</button>
       <button class="pill-btn" id="switchToLocalBtn">📴 切換為純本機儲存</button>
     </div>
-    <div style="background:var(--paper-deep); padding:1rem; border-radius:10px; margin-top:1.2rem; border:1.5px solid var(--line);">
-      <div style="font-weight:800; margin-bottom:0.4rem; font-size:0.9rem;">💻 本機 JSON 檔案備份與還原</div>
-      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <div style="background:var(--paper-deep); padding:0.8rem; border-radius:8px; margin-top:1rem;">
+      <div style="font-weight:800; margin-bottom:0.3rem; font-size:0.85rem;">💻 本機 JSON 檔案備份與還原</div>
+      <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
         <button class="pill-btn small" id="cloudBackupBtn">📥 下載所有資料 JSON 備份</button>
         <button class="pill-btn small" id="cloudRestoreBtn">📤 匯入 JSON 檔案還原</button>
         <input type="file" id="cloudRestoreFile" accept=".json" style="display:none;">
@@ -488,8 +498,8 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
     <h3>📦 已封存學年度</h3>
     <p>封存後的學年資料已從主資料庫移除，僅保留基本資訊。可隨時讀取備份 JSON 進行還原。</p>
     <div class="archive-list" id="archiveListWrap"><div class="empty-hint">目前沒有已封存的學年度。</div></div>
-    <div style="background:var(--paper-deep); padding:1rem; border-radius:10px; margin-top:1rem; border:1.5px solid var(--line);">
-      <div style="font-weight:800; margin-bottom:0.5rem; font-size:0.85rem;">📤 還原封存檔</div>
+    <div style="background:var(--paper-deep); padding:0.8rem; border-radius:8px; margin-top:0.8rem;">
+      <div style="font-weight:800; margin-bottom:0.4rem; font-size:0.82rem;">📤 還原封存檔</div>
       <button class="pill-btn small" id="restoreArchiveBtn">選擇封存 JSON 檔案</button>
       <input type="file" id="restoreArchiveFile" accept=".json" style="display:none;">
     </div>
@@ -501,7 +511,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
   <div class="modal-box">
     <h3>📜 加分歷史紀錄</h3>
     <p>目前學生：<strong id="historyStuLabel"></strong></p>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
       <button class="pill-btn small primary" id="addManualLogBtn">➕ 新增一筆加減分（含原因）</button>
     </div>
     <div class="history-log-list" id="historyLogList"><div class="empty-hint">尚無紀錄。</div></div>
@@ -517,7 +527,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
       <p>🔥 支援 Firebase 雲端毫秒同步！可跨手機、平板與電腦即時同步操控！</p>
     </section>
 
-    <div class="batch-toolbar" id="dashBatchToolbar" style="bottom: 1.4rem;">
+    <div class="batch-toolbar" id="dashBatchToolbar" style="bottom: 1.2rem;">
       <span class="bt-count" id="dashBatchCount">已選 0 個班級</span>
       <button class="bt-danger" id="dashBatchDeleteBtn">🗑️ 刪除選取的班級</button>
       <button id="dashBatchClearBtn">取消選取</button>
@@ -527,20 +537,19 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
   </div>
 
   <div id="classroomConfigView" class="classroom-config-view">
-    <section class="hero" style="padding-bottom:1rem;">
+    <section class="hero" style="padding-bottom:0.8rem;">
       <p class="kicker" id="configYearKicker">ACADEMIC YEAR</p>
       <h1 id="configClassNameTitle">班級分組與座位設定</h1>
     </section>
-    <div style="margin-bottom:1.5rem;">
-      <button class="pill-btn primary" id="goToScoreModeBtn" style="font-size:1rem; padding:0.7rem 1.4rem;">🎯 進入即時加分與計分面板 ➔</button>
+    <div style="margin-bottom:1.2rem;">
+      <button class="pill-btn primary" id="goToScoreModeBtn" style="font-size:0.95rem; padding:0.6rem 1.2rem;">🎯 進入即時加分與計分面板 ➔</button>
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--pink);"></span>
       <div class="step-head"><span class="step-badge num">1</span><h2>學生名單與資料</h2></div>
-      <div class="field" style="max-width:400px;">
+      <div class="field" style="max-width:380px;">
         <label for="classNameInput">班級名稱</label>
-        <div style="display:flex; gap:0.6rem; align-items:center;">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
           <input type="text" id="classNameInput" class="text-input" style="flex:1;">
           <button class="pill-btn danger small" id="deleteCurrentClassBtn" style="white-space:nowrap;" title="刪除目前班級">🗑️ 刪除此班級</button>
         </div>
@@ -549,27 +558,26 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <div class="field"><label for="boysInput">男生資料 (座號 姓名 分數)</label><textarea id="boysInput" placeholder="01,王小明,85"></textarea></div>
         <div class="field"><label for="girlsInput">女生資料 (座號 姓名 分數)</label><textarea id="girlsInput" placeholder="01,陳小美,90"></textarea></div>
       </div>
-      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
         <button class="pill-btn primary" id="loadRosterBtn">載入名單</button>
         <button class="pill-btn small" id="importFileBtn">📂 匯入 Excel/CSV 檔案</button>
         <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
       </div>
-      <div class="roster-cols" style="margin-top:1.6rem;">
+      <div class="roster-cols" style="margin-top:1.4rem;">
         <div class="roster-block">
           <h3>男生名單</h3>
           <table class="roster" id="boysTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
-          <button class="pill-btn small" id="addBoyBtn" style="margin-top:0.6rem;">＋ 新增男生</button>
+          <button class="pill-btn small" id="addBoyBtn" style="margin-top:0.5rem;">＋ 新增男生</button>
         </div>
         <div class="roster-block">
           <h3>女生名單</h3>
           <table class="roster" id="girlsTable"><thead><tr><th>座號</th><th>姓名</th><th>原始分</th><th></th></tr></thead><tbody></tbody></table>
-          <button class="pill-btn small" id="addGirlBtn" style="margin-top:0.6rem;">＋ 新增女生</button>
+          <button class="pill-btn small" id="addGirlBtn" style="margin-top:0.5rem;">＋ 新增女生</button>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--mint);"></span>
       <div class="step-head"><span class="step-badge num">2</span><h2>自動分組設定</h2></div>
       
       <div class="toggle-group" id="sizeModeToggle">
@@ -588,33 +596,31 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <button data-algo="scoreGender">成績平均分配 (S型)</button>
       </div>
 
-      <label style="display:flex; align-items:center; gap:0.6rem; margin:0.6rem 0 1rem; cursor:pointer;">
-        <input type="checkbox" id="useConstraintsToggle" style="width:18px; height:18px; accent-color:var(--coral-deep);">
-        <span style="font-size:0.85rem; font-weight:700;">同時套用自訂迴避條件（不能同組）</span>
+      <label style="display:flex; align-items:center; gap:0.5rem; margin:0.5rem 0 0.8rem; cursor:pointer;">
+        <input type="checkbox" id="useConstraintsToggle" style="width:16px; height:16px; accent-color:var(--coral-deep);">
+        <span style="font-size:0.82rem; font-weight:700;">同時套用自訂迴避條件（不能同組）</span>
       </label>
 
-      <div id="constraintPanel" style="display:none; background:var(--paper-deep); padding:1rem; border-radius:10px; margin-bottom:1rem;">
-        <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+      <div id="constraintPanel" style="display:none; background:var(--paper-deep); padding:0.8rem; border-radius:8px; margin-bottom:0.8rem;">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
           <select id="constraintA"></select>
-          <span style="font-size:0.8rem;">不能與</span>
+          <span style="font-size:0.78rem;">不能與</span>
           <select id="constraintB"></select>
           <button class="pill-btn small" id="addConstraintBtn">加入限制</button>
         </div>
-        <div class="chip-list" id="constraintChips" style="margin-top:0.8rem;"></div>
+        <div class="chip-list" id="constraintChips" style="margin-top:0.6rem;"></div>
       </div>
 
       <button class="pill-btn primary" id="genGroupsBtn">產生分組</button>
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--sky);"></span>
       <div class="step-head"><span class="step-badge num">3</span><h2>分組結果調整</h2></div>
       <div id="groupsWarn"></div>
       <div id="groupsResult"><div class="empty-hint">尚未產生分組。</div></div>
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--butter);"></span>
       <div class="step-head"><span class="step-badge num">4</span><h2>排座位與排法</h2></div>
       
       <div class="toggle-group" id="seatLayoutModeToggle">
@@ -627,7 +633,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <span class="label">行數（橫）</span><div class="stepper"><button id="decColsBtn">－</button><span class="val" id="colsVal">6</span><button id="incColsBtn">＋</button></div>
       </div>
 
-      <div id="podSeatControls" style="display:none; background:var(--paper-deep); padding:1rem; border-radius:12px; margin-bottom:1rem;">
+      <div id="podSeatControls" style="display:none; background:var(--paper-deep); padding:0.8rem; border-radius:10px; margin-bottom:0.8rem;">
         <div class="stepper-row">
           <span class="label">島嶼橫欄</span><div class="stepper"><button id="decPodColsBtn">－</button><span class="val" id="podColsVal">3</span><button id="incPodColsBtn">＋</button></div>
           <span class="label">桌次排列</span>
@@ -640,17 +646,18 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         </div>
       </div>
 
-      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.8rem;">
         <button class="pill-btn primary" id="genSeatsBtn">將學生排入座位</button>
         <button class="pill-btn" id="toggleLockSeatsBtn">🔓 鎖定座位排列</button>
+        <button class="pill-btn small" id="exportConfigJpgBtn">🖼️ 下載座位表 JPG</button>
       </div>
 
       <div class="job-brush-panel">
-        <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
+        <div style="font-size:0.82rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
         <div class="brush-btns" id="configBrushBtns"></div>
       </div>
 
-      <div id="classroomCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line);">
+      <div id="classroomCaptureArea" style="background:var(--white); padding:1rem; border-radius:12px;">
         <div class="classroom-title-banner" id="captureClassTitle">班級座位表</div>
         <div class="board-label">— 講 台 —</div>
 
@@ -659,35 +666,33 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--lilac);"></span>
       <div class="step-head"><span class="step-badge num">5</span><h2>自訂分工角色清單</h2></div>
-      <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-        <input type="text" id="newJobInput" class="text-input" placeholder="新增角色名稱..." style="max-width:240px;">
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input type="text" id="newJobInput" class="text-input" placeholder="新增角色名稱..." style="max-width:220px;">
         <button class="pill-btn primary" id="addJobBtn">新增角色</button>
       </div>
-      <div class="chip-list" id="jobChips" style="margin-top:0.8rem;"></div>
+      <div class="chip-list" id="jobChips" style="margin-top:0.6rem;"></div>
     </div>
   </div>
 
   <div id="classroomScoreView" class="classroom-score-view">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; gap:0.8rem;">
       <div>
         <button class="pill-btn" id="backToConfigBtn">⬅️ 返回分組與座位設定</button>
-        <h2 id="scoreViewTitle" style="margin-top:0.6rem; font-size:1.8rem;">即時加分與計分面板</h2>
+        <h2 id="scoreViewTitle" style="margin-top:0.5rem; font-size:1.5rem;">即時加分與計分面板</h2>
       </div>
-      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
         <button class="pill-btn small" id="toggleScorePerspectiveBtn">🔄 視角：👨‍🏫 教師視角（鏡射／講台在下）</button>
-        <button class="pill-btn danger" id="resetTodayScoresBtn" style="font-size:0.95rem; padding:0.6rem 1.2rem;">🔄 今日加分歸零</button>
+        <button class="pill-btn danger" id="resetTodayScoresBtn" style="font-size:0.85rem; padding:0.45rem 0.9rem;">🔄 今日加分歸零</button>
       </div>
     </div>
 
-    <div class="card" style="margin-top:1rem;">
-      <span class="tape" style="--tape-color:var(--coral);"></span>
+    <div class="card" style="margin-top:0.8rem;">
       <div class="step-head"><span class="step-badge num">★</span><h2>即時加扣分 (Firebase 雲端同步)</h2></div>
       
-      <div class="batch-toggle-row" style="border-top:none; margin-top:0; padding-top:0;">
-        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:700; cursor:pointer;">
-          <input type="checkbox" id="scoreBatchModeToggle" style="width:18px; height:18px; accent-color:var(--coral-deep);">
+      <div class="batch-toggle-row">
+        <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; font-weight:700; cursor:pointer;">
+          <input type="checkbox" id="scoreBatchModeToggle" style="width:16px; height:16px; accent-color:var(--coral-deep);">
           <span>☑️ 批次選取模式（勾選多位學生後統一加扣分）</span>
         </label>
       </div>
@@ -697,7 +702,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         <button id="scoreBatchClearSel">取消選取</button>
       </div>
 
-      <div id="scoreViewCaptureArea" style="background:var(--white); padding:1.5rem; border-radius:12px; border:2px solid var(--line); margin-top:1rem;">
+      <div id="scoreViewCaptureArea" style="background:var(--white); padding:1rem; border-radius:12px; margin-top:0.8rem;">
         <div class="classroom-title-banner" id="scoreCaptureClassTitle">班級即時加分面板</div>
         <div class="board-label" id="scoreBoardLabel">— 講 台 —</div>
 
@@ -706,10 +711,9 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
     </div>
 
     <div class="card">
-      <span class="tape" style="--tape-color:var(--peach);"></span>
       <div class="step-head"><span class="step-badge num">📊</span><h2>匯出成果</h2></div>
       <div class="export-grid">
-        <button class="export-btn" id="exportJpgBtn"><div>🖼️ 下載畫面 JPG</div><div style="font-size:0.75rem; color:var(--ink-soft);">儲存當前座位圖</div></button>
+        <button class="export-btn" id="exportJpgBtn"><div>🖼️ 下載加分畫面 JPG</div><div style="font-size:0.75rem; color:var(--ink-soft);">儲存當前即時計分面板圖</div></button>
         <button class="export-btn" id="exportXlsxBtn"><div>📊 下載成績 Excel (.xlsx)</div><div style="font-size:0.75rem; color:var(--ink-soft);">匯出含組別、每日加分欄位與總分報表</div></button>
       </div>
     </div>
@@ -769,7 +773,6 @@ function toast(msg, isError) {
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-/* 每日新一天自動重置「今日加分」機制 */
 function checkDailyReset(targetClass){
   if(!targetClass) return;
   const todayStr = new Date().toLocaleDateString('zh-TW');
@@ -792,11 +795,10 @@ function checkDailyReset(targetClass){
       }
     });
     saveDB();
-    toast('📅 已自動跨至新日期，網頁今日加分資料已歸零（累積總分與歷史紀錄已完整保留）');
+    toast('📅 已自動跨至新日期，今日加分資料已歸零（歷史紀錄與累積總分完整保留）');
   }
 }
 
-/* 自訂 Modal 對話框系統 */
 let confirmCallback = null;
 function showConfirmModal(title, message, okText = '確定刪除', isDanger = true, onConfirm = null) {
   const titleEl = document.getElementById('confirmModalTitle');
@@ -1043,7 +1045,6 @@ function refreshActivePointers(){
     if(!cur.studentRoles) cur.studentRoles = {};
     if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '小老師'];
     
-    // 檢查日轉切換歸零
     checkDailyReset(cur);
   }
 }
@@ -1077,10 +1078,10 @@ function renderDashboard(){
   const yIds = Object.keys(db.years || {});
   
   if(yIds.length === 0){
-    html = `<div style="text-align:center; padding: 4rem 1rem; grid-column: 1 / -1;">
-        <div style="font-size:3.5rem; margin-bottom:1rem;">📂</div>
+    html = `<div style="text-align:center; padding: 3rem 1rem; grid-column: 1 / -1;">
+        <div style="font-size:3rem; margin-bottom:0.8rem;">📂</div>
         <h2>目前沒有任何學年度資料</h2>
-        <p style="color:var(--ink-soft); margin-bottom: 2rem;">請點擊右上方「＋ 新增學年度」開始建立！</p>
+        <p style="color:var(--ink-soft); margin-bottom: 1.5rem;">請點擊右上方「＋ 新增學年度」開始建立！</p>
     </div>`;
   } else {
     html = yIds.map(yId => {
@@ -1104,7 +1105,7 @@ function renderDashboard(){
                 <span>🪑 座位：${cls.seats ? '已排定' : '未排'}</span>
               </div>
             </div>
-            <div style="padding:0.4rem 0.8rem; border-top:1px dashed var(--line); display:flex; justify-content:flex-end; background:var(--paper-deep); border-radius:0 0 10px 10px;">
+            <div style="padding:0.35rem 0.7rem; display:flex; justify-content:flex-end; background:var(--paper-deep); border-radius:0 0 12px 12px;">
               <button class="pill-btn small danger class-delete-btn" data-yid="${yId}" data-cid="${cId}" data-cname="${escapeHtml(cls.name)}">🗑️ 刪除班級</button>
             </div>
           </div>`;
@@ -1113,7 +1114,7 @@ function renderDashboard(){
       return `<div class="year-section">
         <div class="year-header">
           <h2>📁 ${escapeHtml(year.name)}</h2>
-          <div style="display:flex; gap:0.5rem;">
+          <div style="display:flex; gap:0.4rem;">
             <button class="pill-btn small" onclick="window.dashNewClass('${yId}')">＋ 新增班級</button>
             <button class="pill-btn small" onclick="window.dashArchiveYear('${yId}')">🗄️ 封存學年</button>
           </div>
@@ -1236,9 +1237,6 @@ function switchView(view){
   else if(view === 'score') renderScoreClassroom();
 }
 
-/**
-  * 自動檢查並同步 `cur.seats` 的資料結構（矩陣 vs 島嶼）
-  */
 function syncSeatsWithLayout() {
   if (!cur || !cur.groups || cur.groups.length === 0) return;
   const layoutMode = cur.seatConfig?.layoutMode || 'grid';
@@ -1276,65 +1274,75 @@ function syncSeatsWithLayout() {
   }
 }
 
+/**
+ * 產生座位卡 HTML：
+ * showScore = false -> 第一階段（步驟4：學生名 + 第N組 / 座號 + 多個分工角色）
+ * showScore = true  -> 第二階段（加分面板：三行式包含評級與即時加扣分）
+ */
 function getBaseSeatHtml(occ, dropAttrs, showScore = false){
   if(!occ || !findStudent(occ.id)) return `<div class="seat empty" ${dropAttrs}>空位</div>`;
   const s = findStudent(occ.id);
-  const sc = getStudentScoreObj(s.id);
   const roles = cur.studentRoles[s.id] || [];
-  const groupColorHex = GROUP_COLORS[occ.groupId % GROUP_COLORS.length];
+  const groupIndex = (occ.groupId !== undefined) ? occ.groupId : 0;
+  const groupColorHex = GROUP_COLORS[groupIndex % GROUP_COLORS.length];
+  const genderClass = s.gender === 'F' ? 'gender-f' : 'gender-m';
 
-  const roleHtml = roles.length>0 ? `<div class="role-badges-wrap">${roles.map(r=>`<span class="role-badge">${escapeHtml(r)}</span>`).join('')}</div>` : '';
+  /* 第一階段：排座位設定 (比照圖片，簡潔兩行結構) */
+  if(!showScore){
+    const rolesHtml = roles.length > 0 
+      ? roles.map(r => `<div class="seat-role-pill" title="${escapeHtml(r)}">${escapeHtml(r)}</div>`).join('')
+      : `<div class="seat-role-pill empty-role">分工</div>`;
 
-  let controls = '';
-  let seatExtraClass = '';
-  if(showScore){
-    seatExtraClass = ' score-seat-card';
-    const gradeOpts = ['作品','A','B','C','D','E','假'].map(g=>`<option value="${g}" ${sc.projectGrade===g?'selected':''}>${g}</option>`).join('');
-    const currentMod = sc.projectModifier || '無';
-    const roleText = roles.length ? roles.join('、') : '分工名';
-
-    controls = `
-      <div class="score-seat-header">
-        <span class="score-seat-name">${escapeHtml(s.name)}</span>
-        <span class="score-seat-no">${escapeHtml(s.seatNo || '--')}號</span>
-        <span class="score-seat-group" style="--scolor:${groupColorHex};">第${occ.groupId + 1}組</span>
+    return `<div class="seat stage1-seat ${genderClass}" data-stuid="${s.id}" ${dropAttrs}>
+      <div class="seat-s1-row1">
+        <div class="seat-name-text" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</div>
+        <div class="seat-pill-group" style="background:${groupColorHex};">第${groupIndex + 1}組</div>
       </div>
-      <div class="score-main-row">
-        <span class="score-today">加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
-        <div class="score-actions">
-          <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">▤</button>
-          <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" title="加 1 分">▲</button>
-          <button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" title="扣 1 分">▼</button>
-        </div>
+      <div class="seat-s1-row2">
+        <div class="seat-pill-no">${escapeHtml(s.seatNo ? s.seatNo + '號' : '--')}</div>
+        ${rolesHtml}
       </div>
-      <div class="score-bottom-row">
-        <select class="grade-sel score-grade-select" data-stuid="${s.id}" title="作品評級">${gradeOpts}</select>
-        <button type="button" class="score-mod-btn ${currentMod==='+'?'active':''}" data-stuid="${s.id}" data-mod="+" title="作品加分">+</button>
-        <button type="button" class="score-mod-btn ${currentMod==='-'?'active':''}" data-stuid="${s.id}" data-mod="-" title="作品扣分">−</button>
-        <span class="score-role-box ${roles.length?'':'empty-role'}" title="${escapeHtml(roleText)}">${escapeHtml(roleText)}</span>
-      </div>`;
+    </div>`;
   }
 
+  /* 第二階段：即時加分與計分面板 (三行式結構) */
+  const sc = getStudentScoreObj(s.id);
   const batchOn = !!window.batchMode;
   const isSelected = batchOn && window.selectedIds.has(s.id);
   const checkHtml = batchOn ? `<span class="seat-select-check">${isSelected?'✓':''}</span>` : '';
-  const genderClass = s.gender === 'F' ? 'gender-f' : 'gender-m';
+  const roleText = roles.length > 0 ? roles.join('、') : '分工名';
+  const roleTagClass = roles.length > 0 ? '' : 'empty-role';
 
-  if(showScore){
-    return `<div class="seat ${genderClass}${seatExtraClass} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''}" data-stuid="${s.id}" ${dropAttrs}>${checkHtml}${controls}</div>`;
-  }
+  const gradeOpts = ['作品','A','B','C','D','E','假'].map(g=>`<option value="${g}" ${sc.projectGrade===g?'selected':''}>${g}</option>`).join('');
+  const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
 
   return `<div class="seat ${genderClass} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''}" data-stuid="${s.id}" ${dropAttrs}>
     ${checkHtml}
-    <div class="seat-top-row">
-      <span class="seat-name">${escapeHtml(s.name)}</span>
-      <div class="seat-right-col">
-        <span class="seat-no">${escapeHtml(s.seatNo ? '座:' + s.seatNo : '')}</span>
-        ${roleHtml}
+    
+    <div class="seat-row-header">
+      <div class="seat-name-text" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</div>
+      <div class="seat-pill-no">${escapeHtml(s.seatNo ? s.seatNo + '號' : '--')}</div>
+      <div class="seat-pill-group" style="background:${groupColorHex};">第${groupIndex + 1}組</div>
+    </div>
+
+    <div class="seat-row-score">
+      <div class="seat-score-label">
+        <span>加分:</span>
+        <span class="seat-score-val" id="plus-disp-${s.id}">${sc.plusScore}</span>
+      </div>
+      <div class="seat-score-btns">
+        <button class="seat-action-btn plus-btn" data-stuid="${s.id}" data-dir="1" title="加分">▲</button>
+        <button class="seat-action-btn minus-btn" data-stuid="${s.id}" data-dir="-1" title="扣分">▼</button>
+        <button class="seat-action-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄 / 備註">📝</button>
       </div>
     </div>
-    ${controls}
-    <div class="group-tag" style="--scolor:${groupColorHex};">第 ${occ.groupId + 1} 組</div>
+
+    <div class="seat-row-bottom">
+      <select class="seat-grade-pill grade-sel" data-stuid="${s.id}">${gradeOpts}</select>
+      <select class="seat-mod-pill mod-sel" data-stuid="${s.id}">${modOpts}</select>
+      <div class="seat-role-pill ${roleTagClass}" title="${escapeHtml(roleText)}">${escapeHtml(roleText)}</div>
+    </div>
+
   </div>`;
 }
 
@@ -1345,7 +1353,7 @@ function bindSeatEvents(area, isPods, isScoreView){
       const id = seatEl.dataset.stuid;
       if(!id) return;
 
-      if(window.batchMode){
+      if(window.batchMode && isScoreView){
         e.stopPropagation();
         const nowSelected = !window.selectedIds.has(id);
         if(nowSelected) window.selectedIds.add(id); else window.selectedIds.delete(id);
@@ -1429,10 +1437,10 @@ function renderConfigSeats(){
   if(isPodsMode){
     const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
     const podColCount = Number(cur.seatConfig.podCols) || 3;
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, minmax(0, 1fr));">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(0, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
     bindSeatEvents(area, true, false);
   } else {
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, false)).join('')}</div>`;
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(0, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, false)).join('')}</div>`;
     bindSeatEvents(area, false, false);
   }
 }
@@ -1461,13 +1469,6 @@ function renderScoreSeats(){
   const isPodsMode = cur.seatConfig && cur.seatConfig.layoutMode === 'pods';
 
   if(isPodsMode){
-    /*
-      小組島嶼鏡射：
-      - 不修改 cur.seats
-      - 不 reverse 原始資料
-      - 每個畫面位置透過 display row/col 找回 source index
-      - data-pod / data-desk 永遠指向原始資料，拖曳才不會錯
-    */
     const deskParts = String(cur.seatConfig.podDeskLayout || '2x2').split('x').map(Number);
     const deskRows = Math.max(1, deskParts[0] || 2);
     const deskCols = Math.max(1, deskParts[1] || 2);
@@ -1511,20 +1512,15 @@ function renderScoreSeats(){
           <div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? sourcePodIdx) % GROUP_COLORS.length]};">
             第 ${(pod.podId ?? sourcePodIdx)+1} 組島嶼
           </div>
-          <div class="pod-desks" style="grid-template-columns:repeat(${deskCols}, minmax(120px, 1fr));">
+          <div class="pod-desks" style="grid-template-columns:repeat(${deskCols}, minmax(0, 1fr));">
             ${deskHtml.join('')}
           </div>
         </div>`);
     }
 
-    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${podColCount}, min-content);">${podHtml.join('')}</div>`;
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns:repeat(${podColCount}, minmax(0, 1fr));">${podHtml.join('')}</div>`;
     bindSeatEvents(area, true, true);
   } else {
-    /*
-      傳統矩陣鏡射：
-      畫面位置(displayIdx) 與資料位置(sourceIdx) 分離。
-      教師視角同時反轉 row + col，因此姓名、分數、按鈕都仍來自正確的 seat object。
-    */
     const rows = Math.max(1, Number(cur.seatConfig?.rows) || 5);
     const cols = Math.max(1, Number(cur.seatConfig?.cols) || 6);
     const totalGridSeats = rows * cols;
@@ -1545,32 +1541,21 @@ function renderScoreSeats(){
       ));
     }
 
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cols}, minmax(140px, 1fr));">${html.join('')}</div>`;
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr));">${html.join('')}</div>`;
     bindSeatEvents(area, false, true);
   }
 
-  area.querySelectorAll('.grade-sel').forEach(sel => {
+  area.querySelectorAll('.grade-sel, .mod-sel').forEach(sel => {
     sel.addEventListener('change', () => {
       const id = sel.dataset.stuid;
       const sc = getStudentScoreObj(id);
-      sc.projectGrade = sel.value;
+      if(sel.classList.contains('grade-sel')) sc.projectGrade = sel.value;
+      else sc.projectModifier = sel.value;
       saveDB();
     });
   });
 
-  area.querySelectorAll('.score-mod-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.stuid;
-      const sc = getStudentScoreObj(id);
-      const mod = btn.dataset.mod;
-      sc.projectModifier = sc.projectModifier === mod ? '無' : mod;
-      saveDB();
-      renderScoreSeats();
-    });
-  });
-
-  area.querySelectorAll('.score-btn').forEach(btn => {
+  area.querySelectorAll('.seat-action-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = btn.dataset.stuid;
@@ -1589,6 +1574,7 @@ function renderScoreSeats(){
     });
   });
 }
+
 function openHistoryModal(stuId){
   window.historyModalStuId = stuId;
   const s = findStudent(stuId);
@@ -1781,7 +1767,6 @@ function renderConstraintChips(){
   }));
 }
 
-/* Fisher-Yates 洗牌演算法 */
 function shuffle(arr){
   const a = arr.slice();
   for(let i = a.length - 1; i > 0; i--){
@@ -1992,7 +1977,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* 手動「今日加分歸零」按鈕功能 */
   document.getElementById('toggleScorePerspectiveBtn')?.addEventListener('click', () => {
     window.scorePerspective = window.scorePerspective === 'teacher' ? 'student' : 'teacher';
     renderScoreSeats();
@@ -2253,6 +2237,19 @@ document.addEventListener('DOMContentLoaded', () => {
     toast(window.isSeatsLocked ? '已鎖定座位排列，無法拖曳更換位子' : '已解除鎖定，可進行拖曳調整');
   });
 
+  /* 第一階段座位表 JPG 下載 */
+  document.getElementById('exportConfigJpgBtn')?.addEventListener('click', async ()=>{
+    if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
+    const captureArea = document.getElementById('classroomCaptureArea');
+    try{
+      const canvas = await html2canvas(captureArea, {backgroundColor:'#FFFFFF', scale:2});
+      const link = document.createElement('a');
+      link.download = `${curYear.name}_${cur.name}_座位表.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click(); toast('已成功下載座位表 JPG');
+    } catch(e) { toast('匯出失敗', true); }
+  });
+
   document.getElementById('goDashboardBtn')?.addEventListener('click', ()=> switchView('dash'));
   document.getElementById('backToDashBtn')?.addEventListener('click', ()=> switchView('dash'));
   document.getElementById('goToScoreModeBtn')?.addEventListener('click', ()=> switchView('score'));
@@ -2306,7 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('archiveListBtn')?.addEventListener('click', ()=>{
     const wrap = document.getElementById('archiveListWrap');
     if(wrap) {
-      wrap.innerHTML = (db.archivedYearsMeta || []).map(m=>`<div class="archive-item"><span>📦 ${escapeHtml(m.name)}</span><span style="font-size:0.75rem; color:var(--ink-soft);">${escapeHtml(m.archivedAt)}</span></div>`).join('') || '<div class="empty-hint">目前沒有已封存的學年度。</div>';
+      wrap.innerHTML = (db.archivedYearsMeta || []).map(m=>`<div class="archive-item"><span>📦 ${escapeHtml(m.name)}</span><span style="font-size:0.72rem; color:var(--ink-soft);">${escapeHtml(m.archivedAt)}</span></div>`).join('') || '<div class="empty-hint">目前沒有已封存的學年度。</div>';
     }
     const modal = document.getElementById('archiveListModal');
     if(modal) modal.style.display = 'flex';
@@ -2448,7 +2445,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderScoreSeats();
   });
 
-  /* 匯出包含「組別」、「日期別加分」與「作品評級」的 Excel 表格 */
   document.getElementById('exportXlsxBtn')?.addEventListener('click', ()=>{
     if(!cur){ toast('請先選擇班級', true); return; }
     const stus = allStudents();
@@ -2540,7 +2536,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const roles = (cur.studentRoles[s.id] || []).join('、');
         const baseScore = (s.score !== null && s.score !== undefined) ? Number(s.score) : 0;
         
-        // 今日加分直接使用網頁端 plusScore (若歸零，則精確為 0)
         const todaysPlus = Number(sc.plusScore) || 0;
         const totalPlus = Number(sc.totalPlusLifetime) || 0;
         const totalMinus = Number(sc.totalMinusLifetime) || 0;
@@ -2591,19 +2586,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  /* 第二階段即時計分面板 JPG 下載 */
   document.getElementById('exportJpgBtn')?.addEventListener('click', async ()=>{
     if(!cur || !cur.seats){ toast('請先排入座位', true); return; }
     const captureArea = document.getElementById('scoreViewCaptureArea');
     try{
       const canvas = await html2canvas(captureArea, {backgroundColor:'#FFFFFF', scale:2});
       const link = document.createElement('a');
-      link.download = `${curYear.name}_${cur.name}_座位圖.jpg`;
+      link.download = `${curYear.name}_${cur.name}_即時計分面板.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click(); toast('已成功下載 JPG');
     } catch(e) { toast('匯出失敗', true); }
   });
 
-  // 監聽視窗焦點或定時檢查跨日狀態
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && cur) {
       checkDailyReset(cur);
