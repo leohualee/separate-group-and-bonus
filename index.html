@@ -182,6 +182,143 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
   box-shadow: 0 2px 5px rgba(0,0,0,0.04);
 }
 
+/* 即時加分面板：依照加分卡片的三段式資訊排列 */
+.score-seat-card {
+  min-width: 150px;
+  max-width: 180px;
+  min-height: 112px;
+  padding: 0.48rem 0.55rem 0.5rem;
+  border-width: 2px;
+  border-radius: 13px;
+  gap: 0.28rem;
+}
+.score-seat-card .score-seat-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.3rem;
+}
+.score-seat-card .score-seat-name {
+  font-size: 0.98rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.score-seat-card .score-seat-no {
+  padding: 0.08rem 0.42rem;
+  border: 1px solid #C9D0D8;
+  border-radius: 9px;
+  background: #F5F7FA;
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.score-seat-card .score-seat-group {
+  padding: 0.08rem 0.48rem;
+  border-radius: 9px;
+  border: 1px solid rgba(0,0,0,0.16);
+  background: var(--scolor, var(--paper-deep));
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.score-seat-card .score-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #DCE2E8;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.72);
+}
+.score-seat-card .score-today {
+  color: #7285B8;
+  font-weight: 900;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.score-seat-card .score-today strong {
+  color: #7184B6;
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1rem;
+}
+.score-seat-card .score-actions {
+  display: flex;
+  gap: 0.22rem;
+}
+.score-seat-card .score-actions .score-btn {
+  width: 31px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid #111;
+  background: #fff;
+  font-size: 0.92rem;
+}
+.score-seat-card .score-actions .hist-open-btn {
+  font-size: 0.9rem;
+}
+.score-seat-card .score-bottom-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px 32px minmax(62px, auto);
+  align-items: center;
+  gap: 0.22rem;
+}
+.score-seat-card .score-grade-select {
+  width: 100%;
+  min-width: 0;
+  height: 29px;
+  padding: 0 0.45rem;
+  border: 2px solid #D5DCE4;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #596B86;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+.score-seat-card .score-mod-btn {
+  width: 32px;
+  height: 29px;
+  border: 2px solid #D5DCE4;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #7A8798;
+  font-size: 0.92rem;
+  font-weight: 900;
+  padding: 0;
+}
+.score-seat-card .score-mod-btn.active {
+  background: #FFF0C9;
+  border-color: #D7B96D;
+  color: #8A6200;
+}
+.score-seat-card .score-role-box {
+  height: 29px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.42rem;
+  border: 2px solid #D5C08A;
+  border-radius: 8px;
+  background: #FFF2C9;
+  color: #2B251E;
+  font-size: 0.72rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.score-seat-card .score-role-box.empty-role { color: #8A806F; }
+.score-seat-card .role-badges-wrap { display: none; }
+.score-seat-card .group-tag { display: none; }
+.score-seat-card .seat-top-row { display: none; }
+
+
 .pods-grid .seat {
   min-width: 120px;
   max-width: 145px;
@@ -1149,30 +1286,43 @@ function getBaseSeatHtml(occ, dropAttrs, showScore = false){
   const roleHtml = roles.length>0 ? `<div class="role-badges-wrap">${roles.map(r=>`<span class="role-badge">${escapeHtml(r)}</span>`).join('')}</div>` : '';
 
   let controls = '';
+  let seatExtraClass = '';
   if(showScore){
+    seatExtraClass = ' score-seat-card';
     const gradeOpts = ['作品','A','B','C','D','E','假'].map(g=>`<option value="${g}" ${sc.projectGrade===g?'selected':''}>${g}</option>`).join('');
-    const modOpts = ['無','+','-'].map(m=>`<option value="${m}" ${sc.projectModifier===m?'selected':''}>${m}</option>`).join('');
+    const currentMod = sc.projectModifier || '無';
+    const roleText = roles.length ? roles.join('、') : '分工名';
 
     controls = `
-    <div class="seat-score-row">
-      <select class="grade-sel" data-stuid="${s.id}">${gradeOpts}</select>
-      <select class="mod-sel" data-stuid="${s.id}">${modOpts}</select>
-    </div>
-    <div class="score-control-box">
-      <span>今日: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
-      <div class="score-control-btns">
-        <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
-        <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
-        <button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1">▼</button>
+      <div class="score-seat-header">
+        <span class="score-seat-name">${escapeHtml(s.name)}</span>
+        <span class="score-seat-no">${escapeHtml(s.seatNo || '--')}號</span>
+        <span class="score-seat-group" style="--scolor:${groupColorHex};">第${occ.groupId + 1}組</span>
       </div>
-    </div>`;
+      <div class="score-main-row">
+        <span class="score-today">加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
+        <div class="score-actions">
+          <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">▤</button>
+          <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1" title="加 1 分">▲</button>
+          <button class="score-btn minus-btn" data-stuid="${s.id}" data-dir="-1" title="扣 1 分">▼</button>
+        </div>
+      </div>
+      <div class="score-bottom-row">
+        <select class="grade-sel score-grade-select" data-stuid="${s.id}" title="作品評級">${gradeOpts}</select>
+        <button type="button" class="score-mod-btn ${currentMod==='+'?'active':''}" data-stuid="${s.id}" data-mod="+" title="作品加分">+</button>
+        <button type="button" class="score-mod-btn ${currentMod==='-'?'active':''}" data-stuid="${s.id}" data-mod="-" title="作品扣分">−</button>
+        <span class="score-role-box ${roles.length?'':'empty-role'}" title="${escapeHtml(roleText)}">${escapeHtml(roleText)}</span>
+      </div>`;
   }
 
   const batchOn = !!window.batchMode;
   const isSelected = batchOn && window.selectedIds.has(s.id);
   const checkHtml = batchOn ? `<span class="seat-select-check">${isSelected?'✓':''}</span>` : '';
-  
   const genderClass = s.gender === 'F' ? 'gender-f' : 'gender-m';
+
+  if(showScore){
+    return `<div class="seat ${genderClass}${seatExtraClass} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''}" data-stuid="${s.id}" ${dropAttrs}>${checkHtml}${controls}</div>`;
+  }
 
   return `<div class="seat ${genderClass} ${batchOn?'batch-selectable':''} ${isSelected?'batch-selected':''}" data-stuid="${s.id}" ${dropAttrs}>
     ${checkHtml}
@@ -1399,13 +1549,24 @@ function renderScoreSeats(){
     bindSeatEvents(area, false, true);
   }
 
-  area.querySelectorAll('.grade-sel, .mod-sel').forEach(sel => {
+  area.querySelectorAll('.grade-sel').forEach(sel => {
     sel.addEventListener('change', () => {
       const id = sel.dataset.stuid;
       const sc = getStudentScoreObj(id);
-      if(sel.classList.contains('grade-sel')) sc.projectGrade = sel.value;
-      else sc.projectModifier = sel.value;
+      sc.projectGrade = sel.value;
       saveDB();
+    });
+  });
+
+  area.querySelectorAll('.score-mod-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.stuid;
+      const sc = getStudentScoreObj(id);
+      const mod = btn.dataset.mod;
+      sc.projectModifier = sc.projectModifier === mod ? '無' : mod;
+      saveDB();
+      renderScoreSeats();
     });
   });
 
