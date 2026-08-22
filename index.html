@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>分組座位與即時計分系統 (完整修復與對話框維護版)</title>
+<title>分組座位與即時計分系統</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -147,17 +147,16 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 
 .seat-grid { display:grid; gap:0.9rem; justify-content:center; }
 
-.pods-grid { display:flex; flex-wrap:wrap; gap:1.2rem; justify-content:center; }
+.pods-grid { display:grid; gap:1.2rem; justify-content:center; }
 .pods-grid .pod-box { border:2px dashed var(--ink); border-radius:14px; padding:0.8rem; background:rgba(255,255,255,0.85); box-shadow:0 3px 10px rgba(0,0,0,0.03); flex:0 0 auto; }
 .pods-grid .pod-head { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.9rem; padding:0.25rem 0.75rem; border-radius:8px; background:var(--pcolor,var(--mint)); margin-bottom:0.7rem; display:inline-block; border:1.5px solid var(--ink); }
 .pods-grid .pod-desks { display:grid; gap:0.7rem; }
 
-/* 座位卡片通用樣式 */
 .seat {
   width: 100%;
-  min-width: 145px;
+  min-width: 140px;
   max-width: 175px;
-  min-height: 125px;
+  min-height: 110px;
   border-radius: 12px;
   border: 2px solid var(--ink);
   background: var(--white);
@@ -173,6 +172,18 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
   cursor: grab;
   box-shadow: 0 2px 5px rgba(0,0,0,0.04);
 }
+
+.pods-grid .seat {
+  min-width: 120px;
+  max-width: 145px;
+  min-height: 105px;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.75rem;
+}
+.pods-grid .seat-name { font-size: 0.88rem; }
+.pods-grid .score-control-box { padding: 2px 4px; font-size: 0.72rem; }
+.pods-grid .seat-score-row select { height: 20px; font-size: 0.68rem; padding: 0 2px; }
+
 .seat:active { cursor:grabbing; }
 .seat:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.12); }
 
@@ -207,7 +218,7 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
 .seat-score-row select.grade-sel { flex:1; min-width:0; }
 .seat-score-row select.mod-sel { width:38px; text-align:center; }
 
-.seat.empty { background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; min-height:110px; border-color:var(--line); }
+.seat.empty { background:repeating-linear-gradient(45deg, var(--paper-deep), var(--paper-deep) 6px, var(--paper) 6px, var(--paper) 12px); color:var(--ink-soft); align-items:center; justify-content:center; border-style:dashed; cursor:default; min-height:100px; border-color:var(--line); }
 .seat.drag-over { transform:scale(1.03); outline:3px dashed var(--coral-deep); z-index:10; }
 
 .job-brush-panel { background:var(--paper-deep); border:2px solid var(--line); border-radius:12px; padding:0.9rem 1.1rem; margin-bottom:1rem; }
@@ -483,7 +494,10 @@ table.roster .rm { background:none; border:none; color:#c9564a; font-size:1rem; 
         </div>
       </div>
 
-      <button class="pill-btn primary" id="genSeatsBtn" style="margin-bottom:1rem;">將學生排入座位</button>
+      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+        <button class="pill-btn primary" id="genSeatsBtn">將學生排入座位</button>
+        <button class="pill-btn" id="toggleLockSeatsBtn">🔓 鎖定座位排列</button>
+      </div>
 
       <div class="job-brush-panel">
         <div style="font-size:0.85rem; font-weight:800; color:var(--ink);">🏷️ 選擇角色刷子（點擊座位可指派/取消職位）：</div>
@@ -580,6 +594,7 @@ window.historyModalStuId = null;
 window.dashSelectedClasses = new Set();
 window.batchMode = false;
 window.selectedIds = new Set();
+window.isSeatsLocked = false;
 
 let currentView = 'dash';
 let toastTimer;
@@ -600,10 +615,37 @@ function toast(msg, isError) {
   if(!t) return;
   t.textContent = msg; t.classList.add('show');
   t.classList.toggle('toast-error', !!isError);
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-/* 自訂 Modal 對話框系統（代替 alert, confirm, prompt） */
+/* 每日新一天自動重置「今日加分」機制 */
+function checkDailyReset(targetClass){
+  if(!targetClass) return;
+  const todayStr = new Date().toLocaleDateString('zh-TW');
+  if(!targetClass.lastDate){
+    targetClass.lastDate = todayStr;
+    return;
+  }
+  if(targetClass.lastDate !== todayStr){
+    targetClass.lastDate = todayStr;
+    const stus = [...(targetClass.boys||[]), ...(targetClass.girls||[])];
+    let resetCount = 0;
+    stus.forEach(s => {
+      if(targetClass.studentScores && targetClass.studentScores[s.id]){
+        if(targetClass.studentScores[s.id].plusScore !== 0){
+          targetClass.studentScores[s.id].plusScore = 0;
+          resetCount++;
+        }
+        targetClass.studentScores[s.id].projectGrade = '作品';
+        targetClass.studentScores[s.id].projectModifier = '無';
+      }
+    });
+    saveDB();
+    toast('📅 已自動跨至新日期，網頁今日加分資料已歸零（累積總分與歷史紀錄已完整保留）');
+  }
+}
+
+/* 自訂 Modal 對話框系統 */
 let confirmCallback = null;
 function showConfirmModal(title, message, okText = '確定刪除', isDanger = true, onConfirm = null) {
   const titleEl = document.getElementById('confirmModalTitle');
@@ -842,11 +884,16 @@ function refreshActivePointers(){
 
   if(cur){
     if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random', useConstraints:false };
+    if(cur.groupConfig.value === undefined) cur.groupConfig.value = 4;
+    if(!cur.groupConfig.sizeMode) cur.groupConfig.sizeMode = 'bySize';
     if(!cur.constraints) cur.constraints = [];
     if(!cur.studentScores) cur.studentScores = {};
     if(!cur.seatConfig) cur.seatConfig = { rows:5, cols:6, layoutMode:'grid', podCols:3, podDeskLayout:'2x2' };
     if(!cur.studentRoles) cur.studentRoles = {};
     if(!cur.jobsList) cur.jobsList = ['組長', '工具長', '材料長', '秘書長', '小老師'];
+    
+    // 檢查日轉切換歸零
+    checkDailyReset(cur);
   }
 }
 
@@ -962,6 +1009,7 @@ function updateDashBatchToolbar(){
 window.enterClass = function(yId, cId){
   db.lastYearId = yId; curYear = db.years[yId];
   curYear.lastClassId = cId; cur = curYear.classes[cId];
+  checkDailyReset(cur);
   saveDB(); renderHeaderSelects(); switchView('config');
 };
 
@@ -976,7 +1024,7 @@ window.dashNewClass = function(yId){
     onSubmit: ([name]) => {
       if (!name || !name.trim()) return;
       const cId = uid();
-      targetYear.classes[cId] = { name: name.trim(), boys:[], girls:[], groupConfig:{sizeMode:'bySize', value:4, algo:'random'}, seatConfig:{rows:5,cols:6,layoutMode:'grid'}, studentScores:{}, studentRoles:{}, jobsList:['組長', '工具長', '材料長', '秘書長', '小老師'] };
+      targetYear.classes[cId] = { name: name.trim(), boys:[], girls:[], groupConfig:{sizeMode:'bySize', value:4, algo:'random'}, seatConfig:{rows:5,cols:6,layoutMode:'grid'}, studentScores:{}, studentRoles:{}, jobsList:['組長', '工具長', '材料長', '秘書長', '小老師'], lastDate: new Date().toLocaleDateString('zh-TW') };
       db.lastYearId = yId; curYear = targetYear;
       curYear.lastClassId = cId; cur = curYear.classes[cId];
       saveDB(); renderHeaderSelects(); switchView('config'); toast('已建立新班級');
@@ -1026,6 +1074,7 @@ function renderHeaderSelects(){
 
 function switchView(view){
   currentView = view;
+  if(cur) checkDailyReset(cur);
   document.getElementById('dashboardView').style.display = (view === 'dash') ? 'block' : 'none';
   document.getElementById('classroomConfigView').style.display = (view === 'config') ? 'block' : 'none';
   document.getElementById('classroomScoreView').style.display = (view === 'score') ? 'block' : 'none';
@@ -1036,7 +1085,46 @@ function switchView(view){
   else if(view === 'score') renderScoreClassroom();
 }
 
-/* 產生學生座位 HTML Card */
+/**
+  * 自動檢查並同步 `cur.seats` 的資料結構（矩陣 vs 島嶼）
+  */
+function syncSeatsWithLayout() {
+  if (!cur || !cur.groups || cur.groups.length === 0) return;
+  const layoutMode = cur.seatConfig?.layoutMode || 'grid';
+  const isPodsMode = layoutMode === 'pods';
+
+  const hasPodsStructure = Array.isArray(cur.seats) && cur.seats.length > 0 && cur.seats.every(pod => pod && Array.isArray(pod?.desks));
+
+  if (isPodsMode && !hasPodsStructure) {
+    const minDesks = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[0]) * Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+    cur.seats = cur.groups.map(g => {
+      const deskCount = Math.max(minDesks, (g.members || []).length);
+      const podDesks = Array(deskCount).fill(null);
+      (g.members || []).forEach((memId, mIdx) => {
+        podDesks[mIdx] = { id: memId, groupId: g.id };
+      });
+      return { podId: g.id, desks: podDesks };
+    });
+    saveDB();
+  } else if (!isPodsMode && hasPodsStructure) {
+    const rows = Number(cur.seatConfig.rows) || 5;
+    const cols = Number(cur.seatConfig.cols) || 6;
+    const totalGridSeats = rows * cols;
+    const flatSeats = [];
+    cur.seats.forEach(pod => {
+      (pod.desks || []).forEach(desk => {
+        if (desk && desk.id) flatSeats.push(desk);
+      });
+    });
+    const seats = Array(totalGridSeats).fill(null);
+    flatSeats.forEach((st, idx) => {
+      if (idx < totalGridSeats) seats[idx] = st;
+    });
+    cur.seats = seats;
+    saveDB();
+  }
+}
+
 function getBaseSeatHtml(occ, dropAttrs, showScore = false){
   if(!occ || !findStudent(occ.id)) return `<div class="seat empty" ${dropAttrs}>空位</div>`;
   const s = findStudent(occ.id);
@@ -1057,7 +1145,7 @@ function getBaseSeatHtml(occ, dropAttrs, showScore = false){
       <select class="mod-sel" data-stuid="${s.id}">${modOpts}</select>
     </div>
     <div class="score-control-box">
-      <span>加分: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
+      <span>今日: <strong id="plus-disp-${s.id}">${sc.plusScore}</strong></span>
       <div class="score-control-btns">
         <button class="score-btn hist-open-btn" data-stuid="${s.id}" title="歷史紀錄">📜</button>
         <button class="score-btn plus-btn" data-stuid="${s.id}" data-dir="1">▲</button>
@@ -1120,6 +1208,11 @@ function bindSeatEvents(area, isPods, isScoreView){
     });
 
     seatEl.addEventListener('dragstart', (e) => {
+      if(window.isSeatsLocked){
+        e.preventDefault();
+        toast('座位已鎖定，無法拖曳更換位子', true);
+        return;
+      }
       if(isPods) e.dataTransfer.setData('text/plain', JSON.stringify({ pod: seatEl.dataset.pod, desk: seatEl.dataset.desk }));
       else e.dataTransfer.setData('text/plain', seatEl.dataset.idx);
     });
@@ -1133,6 +1226,10 @@ function bindSeatEvents(area, isPods, isScoreView){
     seatEl.addEventListener('drop', (e) => {
       e.preventDefault();
       area.querySelectorAll('.seat').forEach(s => s.classList.remove('drag-over'));
+      if(window.isSeatsLocked){
+        toast('座位已鎖定，無法更換位子', true);
+        return;
+      }
       if(isPods){
         const from = JSON.parse(e.dataTransfer.getData('text/plain'));
         const p1 = Number(from.pod), d1 = Number(from.desk);
@@ -1159,25 +1256,19 @@ function renderConfigSeats(){
   if(!cur) return;
   const area = document.getElementById('seatArea');
   if(!area) return;
+  syncSeatsWithLayout();
+
   if(!cur.seats || !Array.isArray(cur.seats) || cur.seats.length === 0){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
 
   const isPodsMode = cur.seatConfig && cur.seatConfig.layoutMode === 'pods';
-  const hasPodsStructure = isPodsMode && cur.seats.every(pod => pod && Array.isArray(pod.desks));
 
   if(isPodsMode){
-    if(!hasPodsStructure){
-      area.innerHTML = `<div class="empty-hint">座位排列模式已調整為「小組島嶼」，請點擊上方「將學生排入座位」更新座位。</div>`;
-      return;
-    }
     const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
-    area.innerHTML = `<div class="pods-grid">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(140px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
+    const podColCount = Number(cur.seatConfig.podCols) || 3;
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, false)).join('')}</div></div>`).join('')}</div>`;
     bindSeatEvents(area, true, false);
   } else {
-    if(cur.seats.some(item => item && Array.isArray(item.desks))){
-      area.innerHTML = `<div class="empty-hint">座位排列模式已調整為「傳統矩陣」，請點擊上方「將學生排入座位」更新座位。</div>`;
-      return;
-    }
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `draggable="true" data-idx="${i}"`, false)).join('')}</div>`;
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, false)).join('')}</div>`;
     bindSeatEvents(area, false, false);
   }
 }
@@ -1186,25 +1277,19 @@ function renderScoreSeats(){
   if(!cur) return;
   const area = document.getElementById('scoreSeatArea');
   if(!area) return;
+  syncSeatsWithLayout();
+
   if(!cur.seats || !Array.isArray(cur.seats) || cur.seats.length === 0){ area.innerHTML = `<div class="empty-hint">尚未排入座位。</div>`; return; }
 
   const isPodsMode = cur.seatConfig && cur.seatConfig.layoutMode === 'pods';
-  const hasPodsStructure = isPodsMode && cur.seats.every(pod => pod && Array.isArray(pod.desks));
 
   if(isPodsMode){
-    if(!hasPodsStructure){
-      area.innerHTML = `<div class="empty-hint">座位排列模式已調整為「小組島嶼」，請至設定頁面點擊「將學生排入座位」。</div>`;
-      return;
-    }
     const pCols = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
-    area.innerHTML = `<div class="pods-grid">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(140px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `draggable="true" data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
+    const podColCount = Number(cur.seatConfig.podCols) || 3;
+    area.innerHTML = `<div class="pods-grid" style="grid-template-columns: repeat(${podColCount}, min-content);">${cur.seats.map((pod, pIdx)=>`<div class="pod-box"><div class="pod-head" style="--pcolor:${GROUP_COLORS[(pod.podId ?? pIdx) % GROUP_COLORS.length]};">第 ${(pod.podId ?? pIdx)+1} 組島嶼</div><div class="pod-desks" style="grid-template-columns:repeat(${pCols}, minmax(120px, 1fr));">${(pod.desks || []).map((o, dIdx) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-pod="${pIdx}" data-desk="${dIdx}"`, true)).join('')}</div></div>`).join('')}</div>`;
     bindSeatEvents(area, true, true);
   } else {
-    if(cur.seats.some(item => item && Array.isArray(item.desks))){
-      area.innerHTML = `<div class="empty-hint">座位排列模式已調整為「傳統矩陣」，請至設定頁面點擊「將學生排入座位」。</div>`;
-      return;
-    }
-    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `draggable="true" data-idx="${i}"`, true)).join('')}</div>`;
+    area.innerHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cur.seatConfig.cols || 6}, minmax(140px, 1fr));">${cur.seats.map((o, i) => getBaseSeatHtml(o, `${window.isSeatsLocked?'':'draggable="true"'} data-idx="${i}"`, true)).join('')}</div>`;
     bindSeatEvents(area, false, true);
   }
 
@@ -1263,12 +1348,69 @@ function renderHistoryLog(){
   }).join('');
 }
 
+function updateLockState(){
+  const lockBtn = document.getElementById('toggleLockSeatsBtn');
+  const genGroupsBtn = document.getElementById('genGroupsBtn');
+  if(lockBtn){
+    lockBtn.textContent = window.isSeatsLocked ? '🔒 已鎖定座位排列 (點擊解鎖)' : '🔓 鎖定座位排列';
+    lockBtn.className = window.isSeatsLocked ? 'pill-btn primary' : 'pill-btn';
+  }
+  if(genGroupsBtn){
+    genGroupsBtn.disabled = !!window.isSeatsLocked;
+    genGroupsBtn.title = window.isSeatsLocked ? '座位已鎖定，請先解除鎖定再重新分組' : '';
+  }
+}
+
 function renderConfigClassroom(){
   if(!cur) return;
   document.getElementById('configYearKicker').textContent = curYear.name;
   document.getElementById('configClassNameTitle').textContent = cur.name;
   document.getElementById('classNameInput').value = cur.name;
   document.getElementById('captureClassTitle').textContent = `🏫 ${curYear.name}・${cur.name} 座位表`;
+
+  const grpVal = cur.groupConfig?.value || 4;
+  const grpValEl = document.getElementById('groupSizeVal');
+  if(grpValEl) grpValEl.textContent = grpVal;
+
+  const mode = cur.groupConfig?.sizeMode || 'bySize';
+  const labelEl = document.getElementById('sizeStepperLabel');
+  if(labelEl) labelEl.textContent = mode === 'bySize' ? '每組人數' : '分組數量';
+
+  document.querySelectorAll('#sizeModeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  const algo = cur.groupConfig?.algo || 'random';
+  document.querySelectorAll('#algoToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.algo === algo);
+  });
+
+  const useCons = !!cur.groupConfig?.useConstraints;
+  const consToggle = document.getElementById('useConstraintsToggle');
+  if(consToggle) consToggle.checked = useCons;
+  const consPanel = document.getElementById('constraintPanel');
+  if(consPanel) consPanel.style.display = useCons ? 'block' : 'none';
+
+  const rowsEl = document.getElementById('rowsVal');
+  if(rowsEl) rowsEl.textContent = cur.seatConfig?.rows || 5;
+  const colsEl = document.getElementById('colsVal');
+  if(colsEl) colsEl.textContent = cur.seatConfig?.cols || 6;
+  const podColsEl = document.getElementById('podColsVal');
+  if(podColsEl) podColsEl.textContent = cur.seatConfig?.podCols || 3;
+
+  const layoutMode = cur.seatConfig?.layoutMode || 'grid';
+  document.querySelectorAll('#seatLayoutModeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === layoutMode);
+  });
+
+  const gridCtrl = document.getElementById('gridSeatControls');
+  const podCtrl = document.getElementById('podSeatControls');
+  if(gridCtrl) gridCtrl.style.display = layoutMode === 'grid' ? 'flex' : 'none';
+  if(podCtrl) podCtrl.style.display = layoutMode === 'pods' ? 'block' : 'none';
+
+  const podDeskSel = document.getElementById('podDeskLayoutSelect');
+  if(podDeskSel) podDeskSel.value = cur.seatConfig?.podDeskLayout || '2x2';
+
   renderRosterTables();
   renderJobChips();
   renderBrushBtns();
@@ -1276,6 +1418,7 @@ function renderConfigClassroom(){
   renderConstraintChips();
   renderGroups();
   renderConfigSeats();
+  updateLockState();
 }
 
 function renderScoreClassroom(){
@@ -1372,7 +1515,7 @@ function renderConstraintChips(){
   }));
 }
 
-/* Fisher-Yates (Knuth) 洗牌演算法 */
+/* Fisher-Yates 洗牌演算法 */
 function shuffle(arr){
   const a = arr.slice();
   for(let i = a.length - 1; i > 0; i--){
@@ -1707,11 +1850,31 @@ document.addEventListener('DOMContentLoaded', () => {
     saveDB(); renderConstraintChips();
   });
 
+  document.getElementById('decGroupSizeBtn')?.addEventListener('click', ()=>{
+    if(cur){
+      if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random', useConstraints:false };
+      cur.groupConfig.value = Math.max(1, (Number(cur.groupConfig.value)||4)-1);
+      const val = document.getElementById('groupSizeVal');
+      if(val) val.textContent = cur.groupConfig.value;
+      saveDB();
+    }
+  });
+  document.getElementById('incGroupSizeBtn')?.addEventListener('click', ()=>{
+    if(cur){
+      if(!cur.groupConfig) cur.groupConfig = { sizeMode:'bySize', value:4, algo:'random', useConstraints:false };
+      cur.groupConfig.value = (Number(cur.groupConfig.value)||4)+1;
+      const val = document.getElementById('groupSizeVal');
+      if(val) val.textContent = cur.groupConfig.value;
+      saveDB();
+    }
+  });
+
   document.getElementById('genGroupsBtn')?.addEventListener('click', ()=>{
     if(!cur) return;
     const stus = allStudents();
     if(stus.length===0){ toast('請先輸入學生名單', true); return; }
-    
+    if(window.isSeatsLocked){ toast('座位已鎖定！請先解除鎖定再重新分組', true); return; }
+
     const sizeMode = cur.groupConfig.sizeMode || 'bySize';
     const val = Number(cur.groupConfig.value) || 4;
     const caps = computeCapacities(stus.length, sizeMode, val);
@@ -1740,41 +1903,56 @@ document.addEventListener('DOMContentLoaded', () => {
     if(gridCtrl) gridCtrl.style.display = cur.seatConfig.layoutMode==='grid'?'flex':'none';
     if(podCtrl) podCtrl.style.display = cur.seatConfig.layoutMode==='pods'?'block':'none';
     saveDB();
+    renderConfigSeats();
   });
 
   document.getElementById('podDeskLayoutSelect')?.addEventListener('change', e => {
-    if(cur) { cur.seatConfig.podDeskLayout = e.target.value; saveDB(); }
+    if(cur) { cur.seatConfig.podDeskLayout = e.target.value; saveDB(); renderConfigSeats(); }
   });
 
-  document.getElementById('decGroupSizeBtn')?.addEventListener('click', ()=>{ if(cur){ cur.groupConfig.value = Math.max(1, (Number(cur.groupConfig.value)||4)-1); const val = document.getElementById('groupSizeVal'); if(val) val.textContent = cur.groupConfig.value; saveDB(); } });
-  document.getElementById('incGroupSizeBtn')?.addEventListener('click', ()=>{ if(cur){ cur.groupConfig.value = (Number(cur.groupConfig.value)||4)+1; const val = document.getElementById('groupSizeVal'); if(val) val.textContent = cur.groupConfig.value; saveDB(); } });
+  document.getElementById('decRowsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = Math.max(1, (Number(cur.seatConfig.rows)||5)-1); const val = document.getElementById('rowsVal'); if(val) val.textContent = cur.seatConfig.rows; saveDB(); renderConfigSeats(); } });
+  document.getElementById('incRowsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = (Number(cur.seatConfig.rows)||5)+1; const val = document.getElementById('rowsVal'); if(val) val.textContent = cur.seatConfig.rows; saveDB(); renderConfigSeats(); } });
 
-  document.getElementById('decRowsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = Math.max(1, (Number(cur.seatConfig.rows)||5)-1); const val = document.getElementById('rowsVal'); if(val) val.textContent = cur.seatConfig.rows; saveDB(); } });
-  document.getElementById('incRowsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.rows = (Number(cur.seatConfig.rows)||5)+1; const val = document.getElementById('rowsVal'); if(val) val.textContent = cur.seatConfig.rows; saveDB(); } });
+  document.getElementById('decColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = Math.max(1, (Number(cur.seatConfig.cols)||6)-1); const val = document.getElementById('colsVal'); if(val) val.textContent = cur.seatConfig.cols; saveDB(); renderConfigSeats(); } });
+  document.getElementById('incColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = (Number(cur.seatConfig.cols)||6)+1; const val = document.getElementById('colsVal'); if(val) val.textContent = cur.seatConfig.cols; saveDB(); renderConfigSeats(); } });
 
-  document.getElementById('decColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = Math.max(1, (Number(cur.seatConfig.cols)||6)-1); const val = document.getElementById('colsVal'); if(val) val.textContent = cur.seatConfig.cols; saveDB(); } });
-  document.getElementById('incColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.cols = (Number(cur.seatConfig.cols)||6)+1; const val = document.getElementById('colsVal'); if(val) val.textContent = cur.seatConfig.cols; saveDB(); } });
-
-  document.getElementById('decPodColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.podCols = Math.max(1, (Number(cur.seatConfig.podCols)||3)-1); const val = document.getElementById('podColsVal'); if(val) val.textContent = cur.seatConfig.podCols; saveDB(); } });
-  document.getElementById('incPodColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.podCols = (Number(cur.seatConfig.podCols)||3)+1; const val = document.getElementById('podColsVal'); if(val) val.textContent = cur.seatConfig.podCols; saveDB(); } });
+  document.getElementById('decPodColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.podCols = Math.max(1, (Number(cur.seatConfig.podCols)||3)-1); const val = document.getElementById('podColsVal'); if(val) val.textContent = cur.seatConfig.podCols; saveDB(); renderConfigSeats(); } });
+  document.getElementById('incPodColsBtn')?.addEventListener('click', ()=>{ if(cur){ cur.seatConfig.podCols = (Number(cur.seatConfig.podCols)||3)+1; const val = document.getElementById('podColsVal'); if(val) val.textContent = cur.seatConfig.podCols; saveDB(); renderConfigSeats(); } });
 
   document.getElementById('genSeatsBtn')?.addEventListener('click', ()=>{
     if(!cur || !cur.groups){ toast('請先完成自動分組', true); return; }
     if(cur.seatConfig.layoutMode === 'pods'){
-      const desksPerPod = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[0]) * Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
+      const minDesks = Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[0]) * Number((cur.seatConfig.podDeskLayout||'2x2').split('x')[1]);
       cur.seats = cur.groups.map(g=>{
-        const podDesks = Array(desksPerPod).fill(null);
-        g.members.forEach((memId, mIdx)=>{ if(mIdx<desksPerPod) podDesks[mIdx] = {id:memId, groupId:g.id}; });
+        const deskCount = Math.max(minDesks, g.members.length);
+        const podDesks = Array(deskCount).fill(null);
+        g.members.forEach((memId, mIdx)=>{ podDesks[mIdx] = {id:memId, groupId:g.id}; });
         return { podId: g.id, desks: podDesks };
       });
     } else {
-      const seats = [];
+      const rows = Number(cur.seatConfig.rows) || 5;
+      const cols = Number(cur.seatConfig.cols) || 6;
+      const totalGridSeats = rows * cols;
+      const seats = Array(totalGridSeats).fill(null);
+      let sIdx = 0;
       cur.groups.forEach(g => {
-        g.members.forEach(mId => seats.push({ id: mId, groupId: g.id }));
+        g.members.forEach(mId => {
+          if (sIdx < totalGridSeats) {
+            seats[sIdx] = { id: mId, groupId: g.id };
+            sIdx++;
+          }
+        });
       });
       cur.seats = seats;
     }
     saveDB(); renderConfigSeats(); toast('座位排定！可拖曳卡片互換位置');
+  });
+
+  document.getElementById('toggleLockSeatsBtn')?.addEventListener('click', () => {
+    window.isSeatsLocked = !window.isSeatsLocked;
+    updateLockState();
+    renderConfigSeats();
+    toast(window.isSeatsLocked ? '已鎖定座位排列，無法拖曳更換位子' : '已解除鎖定，可進行拖曳調整');
   });
 
   document.getElementById('goDashboardBtn')?.addEventListener('click', ()=> switchView('dash'));
@@ -1790,6 +1968,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cIds = Object.keys(curYear.classes || {});
       curYear.lastClassId = cIds.length > 0 ? cIds[0] : null;
       cur = curYear.lastClassId ? curYear.classes[curYear.lastClassId] : null;
+      if(cur) checkDailyReset(cur);
       saveDB();
       renderHeaderSelects();
       if (currentView === 'config') renderConfigClassroom();
@@ -1803,6 +1982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (curYear && curYear.classes[cId]) {
       curYear.lastClassId = cId;
       cur = curYear.classes[cId];
+      checkDailyReset(cur);
       saveDB();
       renderHeaderSelects();
       if (currentView === 'config') renderConfigClassroom();
@@ -2119,6 +2299,19 @@ document.addEventListener('DOMContentLoaded', () => {
       link.click(); toast('已成功下載 JPG');
     } catch(e) { toast('匯出失敗', true); }
   });
+
+  // 監聽視窗焦點或定時檢查跨日狀態
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && cur) {
+      checkDailyReset(cur);
+      if (currentView === 'score') renderScoreSeats();
+      else if (currentView === 'config') renderConfigSeats();
+    }
+  });
+
+  setInterval(() => {
+    if (cur) checkDailyReset(cur);
+  }, 60000);
 
   initFirebase();
 });
